@@ -18,29 +18,33 @@ export default function Index() {
   const insets = useSafeAreaInsets();
   const camera = useRef<CameraRef>(null);
   const centered = useRef(false);
+  const dismissed = useRef(false);
   const [perm, setPerm] = useState<Perm>('loading');
   const [canAskAgain, setCanAskAgain] = useState(true);
   const [fix, setFix] = useState<LngLat | null>(null);
-  // Punto fijado en modo "fijar en mapa" (centro del mapa). P-04/P-05 lo consumen despues.
-  const [, setPinned] = useState<LngLat>(SANTA_CRUZ);
+  const [servicesOff, setServicesOff] = useState(false);
   const [mapKey, setMapKey] = useState(0);
   const [mapError, setMapError] = useState(false);
 
   const apply = useCallback((p: Location.LocationPermissionResponse) => {
     setCanAskAgain(p.canAskAgain);
-    setPerm(p.granted ? 'granted' : p.canAskAgain && p.status === 'undetermined' ? 'ask' : 'denied');
+    setPerm(p.granted ? 'granted' : p.canAskAgain && p.status === 'undetermined' && !dismissed.current ? 'ask' : 'denied');
   }, []);
 
   // Al volver de Ajustes se relee el permiso; nunca se pide aqui.
-  useEffect(() => {
-    const check = () => Location.getForegroundPermissionsAsync().then(apply, () => setPerm('denied'));
-    check();
-    const sub = AppState.addEventListener('change', (s) => s === 'active' && check());
-    return () => sub.remove();
+  const check = useCallback(() => {
+    Location.hasServicesEnabledAsync().then((on) => setServicesOff(!on), () => {});
+    return Location.getForegroundPermissionsAsync().then(apply, () => setPerm('denied'));
   }, [apply]);
 
   useEffect(() => {
-    if (perm !== 'granted') return;
+    check();
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && check());
+    return () => sub.remove();
+  }, [check]);
+
+  useEffect(() => {
+    if (perm !== 'granted' || servicesOff) return;
     let sub: Location.LocationSubscription | undefined;
     let gone = false;
     Location.watchPositionAsync(
@@ -53,16 +57,16 @@ export default function Index() {
           camera.current?.jumpTo({ center: c, zoom: 16 });
         }
       },
-    ).then((s) => (gone ? s.remove() : (sub = s)), () => setPerm('denied'));
+    ).then((s) => (gone ? s.remove() : (sub = s)), () => setServicesOff(true));
     return () => {
       gone = true;
       sub?.remove();
     };
-  }, [perm]);
+  }, [perm, servicesOff]);
 
   const request = () => Location.requestForegroundPermissionsAsync().then(apply, () => setPerm('denied'));
 
-  const pinMode = perm === 'denied';
+  const pinMode = perm === 'denied' || (perm === 'granted' && servicesOff);
   return (
     <View style={styles.container}>
       <Map
@@ -75,9 +79,8 @@ export default function Index() {
         attributionPosition={{ top: insets.top + theme.spacing.xs, left: theme.spacing.xs }}
         onDidFinishLoadingMap={() => setMapError(false)}
         onDidFailLoadingMap={() => setMapError(true)}
-        onRegionDidChange={(e) => pinMode && setPinned(e.nativeEvent.center)}
       >
-        <Camera ref={camera} initialViewState={{ center: SANTA_CRUZ, zoom: 14 }} />
+        <Camera ref={camera} initialViewState={{ center: fix ?? SANTA_CRUZ, zoom: fix ? 16 : 14 }} />
         {fix && (
           <Marker lngLat={fix}>
             <View style={styles.dot} />
@@ -112,7 +115,17 @@ export default function Index() {
             body="La necesitamos para mostrarte los taxis cercanos y fijar tu punto de recogida."
           >
             <Button label="Permitir ubicación" onPress={request} />
-            <Button label="Ahora no" variant="secondary" onPress={() => setPerm('denied')} />
+            <Button label="Ahora no" variant="secondary" onPress={() => { dismissed.current = true; setPerm('denied'); }} />
+          </Card>
+        ) : perm === 'granted' && servicesOff ? (
+          <Card
+            title="Activa la ubicación"
+            body="Tu teléfono tiene la ubicación apagada. Actívala o mueve el mapa para fijar tu punto."
+          >
+            <Button
+              label="Activar ubicación"
+              onPress={() => Location.enableNetworkProviderAsync().then(check, () => {})}
+            />
           </Card>
         ) : pinMode ? (
           <Card
