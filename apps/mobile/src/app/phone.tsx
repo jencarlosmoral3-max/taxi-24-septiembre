@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, isValidBoMobile, PhoneField, Text } from '@/components';
@@ -43,7 +43,7 @@ export default function Phone() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior="padding"
       style={[styles.container, { paddingTop: insets.top + theme.spacing['3xl'], paddingBottom: insets.bottom + theme.spacing.xl }]}
     >
       <View style={styles.body}>
@@ -56,6 +56,7 @@ export default function Phone() {
             setServerError(null);
           }}
           error={error}
+          onSubmit={() => valid && !save.isPending && save.mutate()}
         />
       </View>
       <View style={styles.actions}>
