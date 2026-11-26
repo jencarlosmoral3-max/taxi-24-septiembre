@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, BackHandler, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { VyroMap } from '@/components';
+import { useRoute } from '@/lib/geo';
 import type { Place } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
 
@@ -113,6 +114,7 @@ type MapProps = { origin: Place; destination?: Place; driver?: { lat: number; ln
 // Mapa de fondo de las pantallas del viaje: marcadores propio / conductor / destino y ruta recta opcional.
 export function RideMap({ origin, destination, driver, route }: MapProps) {
   const { height } = useWindowDimensions();
+  const road = useRoute(route ? origin : null, route ? destination : null).data; // recta mientras carga o si falla
   const pts = [origin, destination, driver].filter((p): p is { lat: number; lng: number } => !!p);
   const bottom = height * 0.5; // el panel inferior tapa ~la mitad
   const bounds = pts.length > 1
@@ -131,7 +133,7 @@ export function RideMap({ origin, destination, driver, route }: MapProps) {
       {route && destination && (
         <GeoJSONSource
           id="ruta"
-          data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: [lngLat(origin), lngLat(destination)] } }}
+          data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: road ?? [lngLat(origin), lngLat(destination)] } }}
         >
           <Layer id="ruta-linea" type="line" paint={{ 'line-color': theme.colors.primary, 'line-width': theme.spacing['2xs'] }} />
         </GeoJSONSource>
