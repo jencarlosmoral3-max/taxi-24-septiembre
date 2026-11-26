@@ -65,9 +65,10 @@ Aprobado por: CTO (en sesión con Claude: "no usaremos nada de pago en supabase,
 
 ## 2026-11-26 — Proveedor geo: Geoapify
 
-- **Qué:** la Edge Function `geo` usa Geoapify (autocomplete, reverse, routing) en lugar de Photon, Nominatim y OSRM. La key va en el secret `GEOAPIFY_API_KEY` y nunca se loguea. El contrato con la app no cambia. Se dejó de llamar a `geo_upstream_slot` (solo servía al 1 req/s de los servidores públicos); la función SQL y sus migraciones siguen en la DB.
+- **Qué:** la Edge Function `geo` usa Geoapify (autocomplete, reverse, routing) en lugar de Photon, Nominatim y OSRM. La key va en el secret `GEOAPIFY_API_KEY` y nunca se loguea. El contrato con la app no cambia. Se dejó de llamar a `geo_upstream_slot` (solo servía al 1 req/s de los servidores públicos) y la migración `20261126100000_geo_daily_caps` la elimina junto con `private.geo_upstream`.
+- **Presupuesto (3000 créditos/día):** `consume_geo_quota` mantiene 60 llamadas/10 min y suma 200 llamadas/usuario/día y 2700/día globales (día UTC, margen de 300), ambos con `rate_limited` -> 429. `route` rechaza con 422 si la distancia en línea recta supera 150 km (Geoapify cobra 1 crédito por 500 km). Las respuestas vacías de routing no se cachean. Pendiente de aplicar al remoto (migración y deploy de la función).
 - **Aprobado por:** CTO, en el chat, 2026-11-26 (eligió Geoapify gratis).
 - **Por qué:** Photon y Nominatim públicos responden 403 a las IPs de Supabase Edge; verificado en logs 2026-11-26. `search` y `reverse` devolvían siempre 502.
 - **Costo:** plan gratis, 3000 créditos/día, sin tarjeta.
-- **No verificado:** términos de uso comercial del plan gratis de Geoapify; el 403 de OSRM no se observó (se movió igual por ser probable); `limit` en autocomplete no aparece en la tabla de parámetros de la doc consultada, aunque es de uso común.
+- **No verificado:** términos de uso comercial del plan gratis de Geoapify; la hora exacta del reinicio diario de Geoapify; el 403 de OSRM no se observó (se movió igual por ser probable); `limit` en autocomplete no aparece en la tabla de parámetros de la doc consultada, aunque es de uso común.
 - **Cómo revertir:** `git revert` del commit `fix(geo): cambia el proveedor a Geoapify…` y volver a desplegar la función.

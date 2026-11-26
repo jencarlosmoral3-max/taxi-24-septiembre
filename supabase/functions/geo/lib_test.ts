@@ -3,14 +3,14 @@ import { clearCache, handle, type Deps } from "./lib.ts";
 const eq = (a: unknown, b: unknown) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${JSON.stringify(a)} != ${JSON.stringify(b)}`); };
 
 const KEY = "SECRETKEY123";
-function mk(routes: Record<string, () => Response>, opts: { user?: string | null; quota?: string; key?: string; throwFetch?: boolean } = {}) {
+function mk(routes: Record<string, () => Response>, opts: { user?: string | null; quota?: string; key?: string; throwFetch?: boolean | Error } = {}) {
   clearCache();
   const calls: string[] = [];
   const d: Deps = {
     fetch: ((u: string) => {
       calls.push(String(u));
       // Como Deno: el mensaje del error de red incluye la URL (y por tanto la apiKey).
-      if (opts.throwFetch) return Promise.reject(new TypeError(`error sending request for url (${u})`));
+      if (opts.throwFetch) return Promise.reject(opts.throwFetch instanceof Error ? opts.throwFetch : new TypeError(`error sending request for url (${u})`));
       const k = Object.keys(routes).find((p) => String(u).includes(p));
       return Promise.resolve(k ? routes[k]() : new Response("x", { status: 500 }));
     }) as typeof fetch,
@@ -126,16 +126,35 @@ Deno.test("la apiKey nunca aparece en logs ni en la respuesta", async () => {
   console.error = (...a: unknown[]) => { logs.push(a.map(String).join(" ")); };
   try {
     const bodies: string[] = [];
-    for (const [routes, opts] of [[{}, {}], [{}, { throwFetch: true }]] as const) {
+    const badJson = { "geocode": () => new Response(`{"x":"${KEY}"`), "v1/routing": () => new Response(`{"x":"${KEY}"`) };
+    const abort = new DOMException(`signal timed out for ${KEY}`, "TimeoutError");
+    for (const [routes, opts] of [[{}, {}], [{}, { throwFetch: true }], [badJson, {}], [{}, { throwFetch: abort }]] as const) {
       for (const b of [{ op: "search", q: "mercado" }, { op: "reverse", lat: -17.78, lng: -63.18 }, { op: "route", from: FROM, to: TO }]) {
         bodies.push(await (await handle(post(b), mk(routes, opts).d)).text());
       }
     }
-    if (logs.length < 6) throw new Error("se esperaban logs de upstream");
+    if (logs.length < 12) throw new Error("se esperaban logs de upstream");
     if ([...logs, ...bodies].some((t) => t.includes(KEY))) throw new Error("apiKey filtrada");
   } finally { console.error = orig; }
 });
 
 Deno.test("cuerpo > 2048 -> 400", async () => {
   eq((await handle(post({ op: "search", q: "a".repeat(3000) }), mk({}).d)).status, 400);
+});
+
+Deno.test("route: > 150 km en línea recta -> 422 sin llamar al upstream", async () => {
+  const { d, calls } = mk({ [O]: () => J({ results: [{ distance: 1, time: 1 }] }) });
+  const r = await handle(post({ op: "route", from: FROM, to: { lat: -19, lng: -63.18 } }), d); // ~135 km al sur: pasa
+  eq(r.status, 200);
+  const far = await handle(post({ op: "route", from: FROM, to: { lat: -19.5, lng: -63.18 } }), d); // ~190 km
+  eq(far.status, 422);
+  eq(await far.json(), { error: "invalid_route" });
+  eq(calls.length, 1);
+});
+
+Deno.test("route: resultado vacío no se cachea", async () => {
+  const { d, calls } = mk({ [O]: () => J({ results: [] }) });
+  eq((await handle(post({ op: "route", from: FROM, to: TO }), d)).status, 502);
+  eq((await handle(post({ op: "route", from: FROM, to: TO }), d)).status, 502);
+  eq(calls.length, 2);
 });

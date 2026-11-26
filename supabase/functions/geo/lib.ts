@@ -37,7 +37,19 @@ async function getJson(f: Fetch, url: string, timeout: number): Promise<unknown>
     throw new Error(`upstream fetch failed (${(e as Error)?.name ?? "error"})`);
   }
   if (!r.ok) throw new Error(`upstream ${r.status}`);
-  return await r.json();
+  try {
+    return await r.json();
+  } catch (e) {
+    throw new Error(`upstream bad body (${(e as Error)?.name ?? "error"})`);
+  }
+}
+
+// Geoapify cobra 1 crédito por cada 500 km de ruta: se corta antes de gastar (suggest_fare rechaza > 200 km solo después).
+const MAX_ROUTE_KM = 150;
+function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 12742 * Math.asin(Math.sqrt(h));
 }
 
 // deno-lint-ignore no-explicit-any
@@ -109,17 +121,20 @@ export type Rpc = (fn: string, args?: Record<string, unknown>) => Promise<{ data
 
 async function route(f: Fetch, rpc: Rpc, key: string, b: Any) {
   const from = coord(b.from), to = coord(b.to);
+  if (km(from, to) > MAX_ROUTE_KM) throw new HttpError(422, "invalid_route");
   const ck = `o:${r5(from.lat)},${r5(from.lng)};${r5(to.lat)},${r5(to.lng)}`;
   const leg = await cached(ck, 60 * 60_000, async () => {
     try {
       const j = await getJson(f, `${API}/routing?waypoints=${from.lat},${from.lng}|${to.lat},${to.lng}&mode=drive&format=json&apiKey=${encodeURIComponent(key)}`, T_ROUTE) as Any;
-      return j?.results?.[0] ?? null;
+      const leg = j?.results?.[0];
+      if (!leg) throw new Error("empty route"); // no se cachea un resultado vacío
+      return leg;
     } catch (e) {
       console.error("geo upstream", "route", String(e));
       throw new HttpError(502, "upstream_error");
     }
   }) as Any;
-  if (!leg || !isNum(leg.distance) || !isNum(leg.time)) throw new HttpError(502, "upstream_error");
+  if (!isNum(leg.distance) || !isNum(leg.time)) throw new HttpError(502, "upstream_error");
   const distance_m = Math.round(leg.distance), duration_s = Math.round(leg.time);
   const { data, error } = await rpc("suggest_fare", { p_distance_m: distance_m, p_duration_s: duration_s });
   if (error?.message?.includes("invalid_route")) throw new HttpError(422, "invalid_route");

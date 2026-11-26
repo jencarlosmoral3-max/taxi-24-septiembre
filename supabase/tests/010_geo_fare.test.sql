@@ -1,8 +1,9 @@
 begin;
-select plan(25);
+select plan(24);
 
 insert into auth.users (id, instance_id, aud, role, phone)
 values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000001'),
+       ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000003'),
        ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000002');
 
 create function pg_temp.login(u uuid) returns void language plpgsql as $$
@@ -47,13 +48,24 @@ reset role;
 select pg_temp.login('00000000-0000-0000-0000-0000000000b1');
 select lives_ok($$select public.consume_geo_quota()$$, 'cuota independiente por usuario');
 
--- Compuerta de upstream: primera pasa, la segunda inmediata no; proveedores independientes; proveedor inválido.
-select is(public.geo_upstream_slot('nominatim'), true, 'primer slot concedido');
-select is(public.geo_upstream_slot('nominatim'), false, 'segundo slot inmediato denegado');
-select is(public.geo_upstream_slot('osrm'), true, 'otro proveedor independiente');
-select throws_ok($$select public.geo_upstream_slot('evil')$$, 'P0001', 'invalid_provider', 'proveedor fuera de lista');
-select pg_sleep(1.1);
-select is(public.geo_upstream_slot('nominatim'), true, 'tras 1 s vuelve a haber slot');
+-- Tope diario por usuario (200): con el contador en 199 pasa la 200 y la 201 falla.
+reset role;
+insert into private.geo_usage_day (user_id, day, hits)
+values ('00000000-0000-0000-0000-0000000000b1', (now() at time zone 'utc')::date, 199)
+on conflict (user_id, day) do update set hits = 199;
+select pg_temp.login('00000000-0000-0000-0000-0000000000b1');
+select lives_ok($$select public.consume_geo_quota()$$, 'la llamada diaria 200 pasa');
+select throws_ok($$select public.consume_geo_quota()$$, 'P0001', 'rate_limited', 'la diaria 201 se rechaza');
+
+-- Tope global (2700): con el contador en 2699 pasa una y la siguiente (otro usuario) falla.
+reset role;
+insert into private.geo_usage_global (day, hits) values ((now() at time zone 'utc')::date, 2699)
+on conflict (day) do update set hits = 2699;
+select pg_temp.login('00000000-0000-0000-0000-0000000000c1');
+select lives_ok($$select public.consume_geo_quota()$$, 'la global 2700 pasa');
+select throws_ok($$select public.consume_geo_quota()$$, 'P0001', 'rate_limited', 'la global 2701 se rechaza');
+
+select hasnt_function('public', 'geo_upstream_slot', array['text'], 'compuerta upstream eliminada');
 
 reset role;
 delete from public.app_config;
@@ -61,7 +73,6 @@ select pg_temp.login('00000000-0000-0000-0000-0000000000a1');
 select throws_ok($$select public.suggest_fare(1000, 60)$$, 'P0001', 'config_missing', 'sin fila de config');
 reset role;
 set local role anon;
-select throws_ok($$select public.geo_upstream_slot('osrm')$$, '42501', null, 'anon no puede geo_upstream_slot');
 select throws_ok($$select public.suggest_fare(1000, 60)$$, '42501', null, 'anon no puede suggest_fare');
 select throws_ok($$select public.consume_geo_quota()$$, '42501', null, 'anon no puede consume_geo_quota');
 
