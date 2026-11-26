@@ -230,7 +230,7 @@
       // Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
       "email_sent": 2,
       // Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
-      "sms_sent": 30, // local; en produccion bajar (los OTP cuestan)
+      "sms_sent": 30, // limite GLOBAL del proyecto por hora (no por usuario); el control real: max_frequency, captcha, Twilio Verify Fraud Guard + permisos geograficos solo BO, limites por IP
       // Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
       "anonymous_users": 30,
       // Number of sessions that can be refreshed in a 5 minute interval per IP address.
@@ -251,9 +251,8 @@
     // },
 
     "email": {
-      // Allow/disallow the email provider. When false, users can't sign up or sign in with email.
-      // To block new signups only, set enable_signup = false under [auth] instead.
-      "enabled": true,
+      // App solo con telefono: email deshabilitado.
+      "enabled": false,
       // If enabled, a user will be required to confirm any email change on both the old, and new email
       // addresses. If disabled, only the new email is required to confirm.
       "double_confirm_changes": true,
@@ -309,7 +308,7 @@
       // Template for sending OTP to users
       "template": "Your code is {{ .Code }}",
       // Controls the minimum amount of time that must pass before sending another sms otp.
-      "max_frequency": "5s",
+      "max_frequency": "60s",
       // Longitud y vigencia del OTP por SMS/WhatsApp (segundos).
       "otp_length": 6,
       "otp_expiry": 300,
@@ -318,14 +317,16 @@
       // Keys are the phone number with country code and without the + prefix.
       // SOLO LOCAL (B-03): en produccion se usa Twilio Verify (WhatsApp canal primario, SMS respaldo) con secretos via env().
       "test_otp": {
-        "59170000001": "123456",
-        "59170000002": "123456",
-        "59170000003": "123456",
-        "59170000004": "123456",
-        "59170000005": "123456"
+        "59100000001": "123456",
+        "59100000002": "123456",
+        "59100000003": "123456",
+        "59100000004": "123456",
+        "59100000005": "123456"
       },
 
       // Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+      // ATENCION: nunca ejecutar `supabase config push` con este archivo sin un override en `remotes` (ver abajo):
+      // empujaria el twilio ficticio y test_otp (codigo fijo 123456) a produccion.
       // Local: proveedor ficticio habilitado solo para que Auth no desactive el login por teléfono; los OTP salen de test_otp.
       "twilio": {
         "enabled": true,
@@ -381,7 +382,7 @@
         "verify_enabled": false,
         "otp_length": 6,
         "template": "Your code is {{ .Code }}",
-        "max_frequency": "5s"
+        "max_frequency": "60s"
       },
 
       // Configure MFA via WebAuthn
@@ -511,4 +512,18 @@
       // "format_options": "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":180,\"commaStyle\":\"trailing\"}",
     }
   }
+
+  // Ejemplo de override para produccion (descomentar con el project ref real):
+  // "remotes": {
+  //   "production": {
+  //     "project_id": "<project-ref>",
+  //     "auth": {
+  //       "sms": {
+  //         "test_otp": {},
+  //         "twilio": { "enabled": false },
+  //         "twilio_verify": { "enabled": true }
+  //       }
+  //     }
+  //   }
+  // }
 }

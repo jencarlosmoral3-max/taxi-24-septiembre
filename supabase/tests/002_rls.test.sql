@@ -3,14 +3,14 @@ select plan(65);
 
 -- Usuarios: A, B pasajeros; D1, D2 conductores aprobados; D3 conductor pendiente; M admin; X sin rol.
 insert into auth.users (id, instance_id, aud, role, phone) values
-  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000001'),
-  ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000002'),
-  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000011'),
-  ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000012'),
-  ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000013'),
-  ('00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000014'),
-  ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000099'),
-  ('00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000098');
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000001'),
+  ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000002'),
+  ('00000000-0000-0000-0000-0000000000d1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000011'),
+  ('00000000-0000-0000-0000-0000000000d2', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000012'),
+  ('00000000-0000-0000-0000-0000000000d3', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000013'),
+  ('00000000-0000-0000-0000-0000000000d4', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000014'),
+  ('00000000-0000-0000-0000-0000000000f1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000099'),
+  ('00000000-0000-0000-0000-0000000000f2', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000098');
 insert into public.profiles (id, full_name) values
   ('00000000-0000-0000-0000-0000000000a1', 'Pasajero A'),
   ('00000000-0000-0000-0000-0000000000b1', 'Pasajero B'),
@@ -117,11 +117,11 @@ reset role;
 -- Conductor D2 / viaje de B
 select pg_temp.login('00000000-0000-0000-0000-0000000000d2');
 select is((select count(*)::int from public.rides where id = '00000000-0000-0000-0000-00000000bb01'), 1, 'D2 ve su viaje con B');
-select is((select phone from public.get_ride_contact('00000000-0000-0000-0000-00000000bb01')), '+59170000002', 'D2 obtiene el teléfono de B');
+select is((select phone from public.get_ride_contact('00000000-0000-0000-0000-00000000bb01')), '59170000002', 'D2 obtiene el teléfono de B');
 select is((select count(*)::int from public.ride_track_points), 1, 'D2 ve los track points del viaje');
 reset role;
 select pg_temp.login('00000000-0000-0000-0000-0000000000b1');
-select is((select phone from public.get_ride_contact('00000000-0000-0000-0000-00000000bb01')), '+59170000012', 'B obtiene el teléfono de D2');
+select is((select phone from public.get_ride_contact('00000000-0000-0000-0000-00000000bb01')), '59170000012', 'B obtiene el teléfono de D2');
 reset role;
 
 -- D4 ofertó sobre el pedido de B, pero perdió: ya no ve el viaje ni el perfil de B

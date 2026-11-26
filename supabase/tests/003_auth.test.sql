@@ -2,7 +2,7 @@ begin;
 select plan(6);
 
 insert into auth.users (id, instance_id, aud, role, phone) values
-  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '+59170000001');
+  ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59100000001');
 
 select is((select count(*)::int from public.profiles where id = '00000000-0000-0000-0000-0000000000a1'), 1, 'insertar en auth.users crea el perfil');
 select is((select full_name from public.profiles where id = '00000000-0000-0000-0000-0000000000a1'), null, 'el perfil nace vacío');
