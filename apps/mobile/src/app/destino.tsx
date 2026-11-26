@@ -6,13 +6,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text, TextField } from '@/components';
 import { geoSearch, httpStatus } from '@/lib/geo';
-import { useTripDraft, type Place } from '@/store/tripDraft';
+import { SAVED_KINDS, SAVED_LABEL, useTripDraft, type Place } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
 
 export default function Destino() {
   const insets = useSafeAreaInsets();
   const origin = useTripDraft((s) => s.origin);
-  const recents = useTripDraft((s) => s.recents);
+  const allRecents = useTripDraft((s) => s.recents);
+  const saved = useTripDraft((s) => s.saved);
+  // Un lugar guardado no se repite en Recientes.
+  const recents = allRecents.filter((r) => ![saved.home, saved.work].some((p) => p && p.lat === r.lat && p.lng === r.lng));
   const setDestination = useTripDraft((s) => s.setDestination);
   const [text, setText] = useState('');
   const [q, setQ] = useState('');
@@ -83,7 +86,40 @@ export default function Destino() {
         style={search.isPlaceholderData ? styles.dim : undefined}
         data={enabled ? (results ?? []) : recents}
         keyExtractor={(p, i) => `${p.lat},${p.lng},${i}`}
-        ListHeaderComponent={!enabled && recents.length > 0 ? <Text variant="body14Medium" muted style={styles.section}>Recientes</Text> : undefined}
+        ListHeaderComponent={
+          enabled ? undefined : (
+            <View>
+              {SAVED_KINDS.map((k) => {
+                const p = saved[k];
+                const label = SAVED_LABEL[k];
+                return (
+                  <View key={k} style={styles.savedRow}>
+                    <Pressable
+                      accessibilityRole="button"
+                      accessibilityLabel={p ? `${label}. ${p.address}` : `Agregar ${label.toLowerCase()}`}
+                      onPress={() => (p ? pick(p) : router.push({ pathname: '/fijar-destino', params: { guardar: k } }))}
+                      style={styles.savedMain}
+                    >
+                      <Text variant="body16Medium" numberOfLines={1} muted={!p}>{p ? label : `Agregar ${label.toLowerCase()}`}</Text>
+                      {!!p?.address && <Text variant="body14" muted numberOfLines={1}>{p.address}</Text>}
+                    </Pressable>
+                    {p && (
+                      <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`Cambiar ${label.toLowerCase()}`}
+                        onPress={() => router.push({ pathname: '/fijar-destino', params: { guardar: k } })}
+                        style={styles.savedEdit}
+                      >
+                        <Text variant="body14Medium" color={theme.colors.primary}>Cambiar</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                );
+              })}
+              {recents.length > 0 && <Text variant="body14Medium" muted style={styles.section}>Recientes</Text>}
+            </View>
+          )
+        }
         renderItem={({ item }) => (
           <Pressable accessibilityRole="button" accessibilityLabel={`${item.name}. ${item.address}`} onPress={() => pick(item)} style={styles.row}>
             <Text variant="body16Medium" numberOfLines={1}>{item.name}</Text>
@@ -107,5 +143,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: theme.colors.border,
   },
+  savedRow: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: theme.colors.border },
+  savedMain: { flex: 1, minHeight: theme.size.touchMin, justifyContent: 'center', paddingLeft: theme.size.screenPadding, paddingVertical: theme.spacing.sm },
+  savedEdit: { minHeight: theme.size.touchMin, justifyContent: 'center', paddingHorizontal: theme.size.screenPadding },
   dim: { opacity: 0.5 },
 });

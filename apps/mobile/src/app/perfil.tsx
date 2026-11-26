@@ -10,6 +10,7 @@ import { resetDemo } from '@/demo/reset';
 import { useMyPhone, useSession } from '@/lib/auth';
 import { signOut } from '@/lib/googleSignIn';
 import { useAppMode, type AppMode } from '@/store/appMode';
+import { useProfileSetup } from '@/store/profileSetup';
 import { theme } from '@/theme/theme';
 
 const MODES: { mode: AppMode; label: string }[] = [
@@ -34,7 +35,8 @@ export default function Perfil() {
   const session = useSession();
   const phone = useMyPhone(session?.user.id).data;
   const { mode, setMode } = useAppMode();
-  const name = (session?.user.user_metadata?.full_name as string | undefined) || 'Pasajero';
+  const setupName = useProfileSetup((s) => s.name);
+  const name = setupName || (session?.user.user_metadata?.full_name as string | undefined) || 'Pasajero';
 
   const pick = (m: AppMode) => {
     if (m === mode) return;
