@@ -1,18 +1,14 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, Text } from '@/components';
 import { CommonScreen, rowStyles } from '@/demo/CommonScreen';
-import { FAQ, SUPPORT_PHONE } from '@/demo/commonExtras';
+import { FAQ } from '@/demo/commonExtras';
 import { theme } from '@/theme/theme';
 
-// shortcut: demo, el número es de ejemplo y podría ser real; poner DEMO=false al cargar el del sindicato.
-const DEMO: boolean = true;
-const contact = (what: string, url: string, demoTitle: string) => {
-  if (DEMO) return Alert.alert(demoTitle, 'En la demo no se abre la app. En la app real se contacta al sindicato.');
-  Linking.openURL(url).catch(() => Alert.alert('No se pudo abrir', `${what}: no hay una app disponible.`));
-};
+// shortcut: demo sin número real; el del sindicato + Linking (wa.me / tel:) llegan en fase 2.
+const contact = (title: string) => Alert.alert(`${title} (demo)`, 'En la demo no se abre la app. En la app real se contacta al sindicato.');
 
 export default function Soporte() {
   const [open, setOpen] = useState<number | null>(null);
@@ -20,8 +16,8 @@ export default function Soporte() {
     <CommonScreen title="Soporte">
       <Text muted>¿Necesitas ayuda? Escríbele o llama al sindicato.</Text>
       <View style={styles.actions}>
-        <Button label="WhatsApp del sindicato" onPress={() => contact('Mensaje por WhatsApp', `https://wa.me/${SUPPORT_PHONE}`, 'WhatsApp (demo)')} />
-        <Button label="Llamar" variant="secondary" onPress={() => contact('Llamada', `tel:+${SUPPORT_PHONE}`, 'Llamada (demo)')} />
+        <Button label="WhatsApp del sindicato" onPress={() => contact('WhatsApp')} />
+        <Button label="Llamar" variant="secondary" onPress={() => contact('Llamada')} />
       </View>
       <Text variant="title18" accessibilityRole="header" style={styles.faqTitle}>
         Preguntas frecuentes
