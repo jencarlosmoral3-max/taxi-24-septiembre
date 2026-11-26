@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { usePanel, type Resolucion } from "@/components/panel-context";
 import { DOC_KINDS, solicitudes as inicial } from "@/mock/data";
 
-type Resolucion = { tipo: "aprobada" } | { tipo: "rechazada"; motivo: string };
-
 export function SolicitudesView() {
-  const [resueltas, setResueltas] = useState<Record<string, Resolucion>>({});
+  const { resueltas, resolver: resolverCtx } = usePanel();
+  const detRef = useRef<HTMLHeadingElement>(null);
   const pendientes = inicial.filter((s) => !resueltas[s.id]);
   const [selId, setSelId] = useState(inicial[0].id);
   const [rechazando, setRechazando] = useState(false);
@@ -25,11 +25,12 @@ export function SolicitudesView() {
 
   function resolver(r: Resolucion) {
     if (!sel) return;
-    setResueltas((p) => ({ ...p, [sel.id]: r }));
+    resolverCtx(sel.id, r);
     setRechazando(false);
     setMotivo("");
     const siguiente = inicial.find((s) => s.id !== sel.id && !resueltas[s.id]);
     if (siguiente) setSelId(siguiente.id);
+    detRef.current?.focus(); // el botón pulsado desaparece
   }
 
   function confirmarRechazo(e: React.FormEvent) {
@@ -56,7 +57,7 @@ export function SolicitudesView() {
                   <button
                     type="button"
                     onClick={() => elegir(s.id)}
-                    aria-pressed={active}
+                    aria-current={active ? "true" : undefined}
                     className={`w-full rounded-card border p-4 text-left transition-colors ${
                       active ? "border-primary bg-surface-2" : "border-border bg-surface hover:bg-surface-2"
                     }`}
@@ -84,7 +85,7 @@ export function SolicitudesView() {
           <section aria-labelledby="detalle" className="card flex flex-col gap-6">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <h2 id="detalle" className="text-xl font-semibold">{sel.nombre}</h2>
+                <h2 id="detalle" ref={detRef} tabIndex={-1} className="text-xl font-semibold">{sel.nombre}</h2>
                 <p className="text-sm text-text-muted">Solicitud enviada {sel.enviada}</p>
               </div>
               {res && (
@@ -95,19 +96,23 @@ export function SolicitudesView() {
             </div>
 
             <div className="grid gap-6 xl:grid-cols-2">
+              <section aria-labelledby="h-datos">
+              <h3 id="h-datos" className="mb-3 text-base font-semibold">Datos personales</h3>
               <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-                <h3 className="col-span-2 text-base font-semibold">Datos personales</h3>
                 <dt className="text-text-muted">CI</dt><dd>{sel.ci}</dd>
                 <dt className="text-text-muted">Teléfono</dt><dd>{sel.telefono}</dd>
                 <dt className="text-text-muted">N.º interno</dt><dd className="font-semibold tabular-nums">{sel.nroInterno}</dd>
               </dl>
+              </section>
+              <section aria-labelledby="h-veh">
+              <h3 id="h-veh" className="mb-3 text-base font-semibold">Vehículo</h3>
               <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-3 text-sm">
-                <h3 className="col-span-2 text-base font-semibold">Vehículo</h3>
                 <dt className="text-text-muted">Marca y modelo</dt><dd>{sel.vehiculo.marca} {sel.vehiculo.modelo}</dd>
                 <dt className="text-text-muted">Año</dt><dd>{sel.vehiculo.anio}</dd>
                 <dt className="text-text-muted">Color</dt><dd>{sel.vehiculo.color}</dd>
                 <dt className="text-text-muted">Placa</dt><dd className="font-semibold">{sel.vehiculo.placa}</dd>
               </dl>
+              </section>
             </div>
 
             <div>
@@ -155,6 +160,7 @@ export function SolicitudesView() {
                   onChange={(e) => { setMotivo(e.target.value); setErrorMotivo(false); }}
                   aria-invalid={errorMotivo}
                   aria-describedby="motivo-ayuda"
+                  autoFocus
                   className="field py-3"
                   placeholder="Ej.: la licencia está vencida"
                 />
@@ -163,7 +169,7 @@ export function SolicitudesView() {
                 </p>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <button type="submit" className="btn-danger">Confirmar rechazo</button>
-                  <button type="button" className="btn-secondary" onClick={() => { setRechazando(false); setErrorMotivo(false); }}>
+                  <button type="button" className="btn-secondary" onClick={() => { setRechazando(false); setErrorMotivo(false); detRef.current?.focus(); }}>
                     Cancelar
                   </button>
                 </div>

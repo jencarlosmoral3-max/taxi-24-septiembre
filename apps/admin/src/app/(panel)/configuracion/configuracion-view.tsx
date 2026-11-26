@@ -33,10 +33,15 @@ export function ConfiguracionView() {
     for (const c of campos) {
       const raw = vals[c.name].trim().replace(",", ".");
       const n = Number(raw);
-      if (raw === "" || Number.isNaN(n)) nuevos[c.name] = "Ingresa un número.";
+      const veces = n / c.step;
+      if (!/^\d+(\.\d+)?$/.test(raw)) nuevos[c.name] = "Ingresa un número, por ejemplo 12,5.";
+      else if (c.step === 1 && !/^\d+$/.test(raw)) nuevos[c.name] = "Debe ser un número entero.";
       else if (n < c.min || n > c.max) nuevos[c.name] = `Debe estar entre ${c.min} y ${c.max} ${c.unidad}.`;
+      else if (Math.abs(veces - Math.round(veces)) > 1e-9) nuevos[c.name] = `Debe ser múltiplo de ${String(c.step).replace(".", ",")}.`;
     }
     setErrores(nuevos);
+    const primero = campos.find((c) => nuevos[c.name]);
+    if (primero) document.getElementById(primero.name)?.focus();
     setGuardado(Object.keys(nuevos).length === 0); // mock: la fase 2 persiste en Supabase
   }
 
@@ -55,12 +60,12 @@ export function ConfiguracionView() {
                 name={c.name}
                 inputMode="decimal"
                 value={vals[c.name]}
-                onChange={(e) => { setVals((v) => ({ ...v, [c.name]: e.target.value })); setGuardado(false); }}
+                onChange={(e) => { setVals((v) => ({ ...v, [c.name]: e.target.value })); setErrores((x) => ({ ...x, [c.name]: undefined })); setGuardado(false); }}
                 aria-invalid={!!errores[c.name]}
                 aria-describedby={`${c.name}-msg`}
                 className={`field tabular-nums ${errores[c.name] ? "border-danger" : ""}`}
               />
-              <p id={`${c.name}-msg`} className={`mt-2 text-sm ${errores[c.name] ? "msg-error" : "text-text-muted"}`}>
+              <p id={`${c.name}-msg`} role={errores[c.name] ? "alert" : undefined} className={`mt-2 text-sm ${errores[c.name] ? "msg-error" : "text-text-muted"}`}>
                 {errores[c.name] ?? c.ayuda}
               </p>
             </div>

@@ -1,10 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { conductores as inicial, type EstadoConductor } from "@/mock/data";
+import { useRef, useState } from "react";
+import { usePanel } from "@/components/panel-context";
+import { miles } from "@/lib/format";
+import type { EstadoConductor } from "@/mock/data";
 
 export function PadronView() {
-  const [lista, setLista] = useState(inicial);
+  const { conductores: lista, alternar } = usePanel();
+  const listaRef = useRef<HTMLDivElement>(null);
   const [q, setQ] = useState("");
   const [estado, setEstado] = useState<"todos" | EstadoConductor>("todos");
 
@@ -15,8 +18,6 @@ export function PadronView() {
       norm(`${c.nombre} ${c.nroInterno} ${c.placa} ${c.telefono}`).includes(norm(q.trim())),
   );
 
-  const alternar = (id: string) =>
-    setLista((l) => l.map((c) => (c.id === id ? { ...c, estado: c.estado === "aprobado" ? "suspendido" : "aprobado" } : c)));
 
   return (
     <>
@@ -38,7 +39,7 @@ export function PadronView() {
         </div>
       </form>
 
-      <div className="card mt-6 overflow-x-auto p-0">
+      <div ref={listaRef} tabIndex={-1} role="region" aria-label="Resultados" className="card mt-6 overflow-x-auto p-0">
         <table className="w-full min-w-[780px] border-collapse">
           <caption className="sr-only">Conductores y vehículos del sindicato</caption>
           <thead>
@@ -62,14 +63,14 @@ export function PadronView() {
                 <td className="td tabular-nums">{c.nroInterno}</td>
                 <td className="td">{c.vehiculo}</td>
                 <td className="td whitespace-nowrap">{c.placa}</td>
-                <td className="td text-right tabular-nums">{c.viajes.toLocaleString("es-BO")}</td>
+                <td className="td text-right tabular-nums">{miles(c.viajes)}</td>
                 <td className="td">
                   <span className={`chip ${c.estado === "aprobado" ? "bg-success-strong text-white" : "bg-danger-strong text-white"}`}>
                     {c.estado === "aprobado" ? "Aprobado" : "Suspendido"}
                   </span>
                 </td>
                 <td className="td text-right">
-                  <button type="button" onClick={() => alternar(c.id)} className="btn-secondary" aria-label={`${c.estado === "aprobado" ? "Suspender" : "Reactivar"} a ${c.nombre}`}>
+                  <button type="button" onClick={() => { alternar(c.id); if (estado !== "todos") listaRef.current?.focus(); }} className="btn-secondary" aria-label={`${c.estado === "aprobado" ? "Suspender" : "Reactivar"} a ${c.nombre}`}>
                     {c.estado === "aprobado" ? "Suspender" : "Reactivar"}
                   </button>
                 </td>

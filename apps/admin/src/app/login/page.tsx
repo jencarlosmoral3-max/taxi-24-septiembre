@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { asset } from "@/lib/format";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 
@@ -8,7 +9,7 @@ export default function LoginPage() {
   return (
     <main className="flex min-h-screen items-center justify-center p-6">
       <div className="card w-full max-w-md p-8 text-center">
-        <Image src="/vyro-wordmark-light.png" alt="Vyro" width={160} height={58} priority className="mx-auto mb-6" />
+        <Image src={asset("/vyro-wordmark-light.png")} alt="Vyro" width={160} height={58} priority className="mx-auto mb-6" />
         <h1 className="text-2xl font-semibold">Panel del sindicato</h1>
         <p className="mt-2 text-text-muted">Sindicato 24 de Septiembre · Santa Cruz de la Sierra</p>
         {/* Mock: la fase 2 inicia OAuth con Google. */}

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { bs, fechaCorta } from "@/lib/format";
 import { conductores, taxisEnVivo, viajes, type EstadoViaje } from "@/mock/data";
 
-const bs = (n: number) => `Bs ${n.toLocaleString("es-BO", { minimumFractionDigits: 2 })}`;
 
 const chipEstado: Record<EstadoViaje, string> = {
   "en curso": "bg-primary text-on-primary",
@@ -124,7 +124,7 @@ function Historial() {
             {filtrados.map((v) => (
               <tr key={v.id}>
                 <th scope="row" className="td text-left font-normal tabular-nums">
-                  {new Date(`${v.fecha}T12:00`).toLocaleDateString("es-BO", { day: "2-digit", month: "short" })}, {v.hora}
+                  {fechaCorta(v.fecha)}, {v.hora}
                 </th>
                 <td className="td">{v.pasajero}</td>
                 <td className="td">{v.conductor}</td>
@@ -144,11 +144,20 @@ function Historial() {
 }
 
 export function ViajesView() {
-  const [tab, setTab] = useState<"vivo" | "historial">("vivo");
   const tabs = [
     { id: "vivo", label: "En vivo" },
     { id: "historial", label: "Historial" },
   ] as const;
+  const [tab, setTab] = useState<(typeof tabs)[number]["id"]>("vivo");
+
+  function onKeyDown(e: React.KeyboardEvent) {
+    const i = tabs.findIndex((t) => t.id === tab);
+    const j = { ArrowRight: (i + 1) % tabs.length, ArrowLeft: (i - 1 + tabs.length) % tabs.length, Home: 0, End: tabs.length - 1 }[e.key];
+    if (j === undefined) return;
+    e.preventDefault();
+    setTab(tabs[j].id);
+    document.getElementById(`tab-${tabs[j].id}`)?.focus();
+  }
 
   return (
     <>
@@ -164,13 +173,7 @@ export function ViajesView() {
             tabIndex={tab === t.id ? 0 : -1}
             type="button"
             onClick={() => setTab(t.id)}
-            onKeyDown={(e) => {
-              if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-                const next = tab === "vivo" ? "historial" : "vivo";
-                setTab(next);
-                document.getElementById(`tab-${next}`)?.focus();
-              }
-            }}
+            onKeyDown={onKeyDown}
             className={`min-h-12 border-b-2 px-5 text-sm font-medium ${
               tab === t.id ? "border-primary text-text" : "border-transparent text-text-muted hover:text-text"
             }`}
@@ -179,8 +182,12 @@ export function ViajesView() {
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={`panel-${tab}`} aria-labelledby={`tab-${tab}`}>
-        {tab === "vivo" ? <EnVivo /> : <Historial />}
+      {/* Ambos paneles montados: los filtros del historial sobreviven al cambio de pestaña. */}
+      <div role="tabpanel" id="panel-vivo" aria-labelledby="tab-vivo" tabIndex={0} hidden={tab !== "vivo"}>
+        <EnVivo />
+      </div>
+      <div role="tabpanel" id="panel-historial" aria-labelledby="tab-historial" tabIndex={0} hidden={tab !== "historial"}>
+        <Historial />
       </div>
     </>
   );

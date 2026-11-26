@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useSos } from "@/components/sos-context";
 
 export function SosView() {
   const { incidentes, atender, pendientes } = useSos();
   const [selId, setSelId] = useState(incidentes[0].id);
   const sel = incidentes.find((i) => i.id === selId) ?? incidentes[0];
+  const detRef = useRef<HTMLHeadingElement>(null);
 
   return (
     <>
@@ -22,12 +23,12 @@ export function SosView() {
               <li key={i.id}>
                 <button
                   type="button"
-                  aria-pressed={i.id === sel.id}
+                  aria-current={i.id === sel.id ? "true" : undefined}
                   onClick={() => setSelId(i.id)}
                   className={`w-full rounded-card border p-4 text-left transition-colors ${
                     i.atendida
                       ? `bg-surface hover:bg-surface-2 ${i.id === sel.id ? "border-text-muted" : "border-border"}`
-                      : "border-danger bg-danger-strong/15 hover:bg-danger-strong/25"
+                      : `bg-danger-strong/15 hover:bg-danger-strong/25 ${i.id === sel.id ? "border-danger ring-2 ring-danger" : "border-danger"}`
                   }`}
                 >
                   <span className="flex items-center justify-between gap-2">
@@ -47,7 +48,7 @@ export function SosView() {
         <section aria-labelledby="det" className={`card flex flex-col gap-6 ${sel.atendida ? "" : "border-danger"}`}>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 id="det" className="text-xl font-semibold">Alerta SOS · viaje {sel.viaje}</h2>
+              <h2 id="det" ref={detRef} tabIndex={-1} className="text-xl font-semibold">Alerta SOS · viaje {sel.viaje}</h2>
               <p className="text-sm text-text-muted">{sel.hora}</p>
             </div>
             <span className={`chip ${sel.atendida ? "bg-success-strong text-white" : "bg-danger-strong text-white"}`}>
@@ -63,7 +64,7 @@ export function SosView() {
           </dl>
           {!sel.atendida && (
             <div className="border-t border-border pt-5">
-              <button type="button" className="btn-primary" onClick={() => atender(sel.id)}>Marcar atendida</button>
+              <button type="button" className="btn-primary" onClick={() => { atender(sel.id); detRef.current?.focus(); }}>Marcar atendida</button>
             </div>
           )}
         </section>
