@@ -7,8 +7,8 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 - **Plan:** [`docs/plan-planificacion-mvp.md`](plan-planificacion-mvp.md) (aprobado por el CTO 2026-11-25). Backlog vivo: [`docs/backlog.md`](backlog.md) (las "Nota" de cada issue son contrato).
 - **Siguiente paso concreto:**
   1. Hecho: Supabase remoto con 11 migraciones verificadas por huella, Edge Function `geo` desplegada (B-12/B-13), Google (Client IDs web + Android, secret cargado por el CTO), Email apagado, Realtime solo privado.
-  2. P-02 (rama `feat/p02-google-login`, PR #14 en borrador): login pasado a **OAuth web de Supabase** (ver decisiones). Falta: (a) CTO agrega `vyro://**` en Supabase → Authentication → URL Configuration → Redirect URLs; (b) rebuild del dev APK (entra `expo-web-browser`, módulo nativo; con el emulador cerrado durante gradle, la máquina se quedó sin memoria la vez anterior); (c) prueba E2E en emulador: login → teléfono 70000001 → cerrar y reabrir (sesión persiste) → cerrar sesión. Recién ahí PR listo y merge (condición de la review Opus).
-  3. Después: P-03 mapa con MapLibre + OpenFreeMap (con "© OpenStreetMap contributors"), B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
+  2. Hecho: P-02 login con Google por **OAuth web de Supabase** (PR #14). E2E en emulador 2026-11-26: login → teléfono 70000001 (guardado en `private.contact_phones`) → matar y reabrir (sesión persiste) → cerrar sesión (vuelve a login).
+  3. Siguiente: P-03 mapa con MapLibre + OpenFreeMap (con "© OpenStreetMap contributors"), B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
   4. Prueba en el Samsung J7 cuando el MVP demo esté listo.
 - **Merge:** automático con CI verde (autorizado por el CTO): esperar todos los jobs (`typecheck`, `lint`, `build-admin`, `db-test`, `deno-geo`) en success sobre el head del PR y `gh pr merge --squash --delete-branch`.
 - **Repo:** `jencarlosmoral3-max/taxi-24-septiembre` (privado). Para `gh` y `git push`: `export GH_TOKEN=$(gh auth token --user jencarlosmoral3-max)`.
@@ -18,6 +18,7 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 - **Mergeado:** F-03 (monorepo + CI), B-01 schema, B-02 RLS, B-03 login con Google + teléfono de contacto (backend), B-04 storage, B-05…B-09 puja, spike GPS F-06 en emulador (PR #3–#10). Al cierre de la sesión: PR #11 (B-10 Realtime/GPS, B-14 calificaciones, B-15 SOS) y el PR de P-01 (tema + componentes) con merge automático por CI; confirmar su estado en GitHub. PR #15: B-12 proxy `geo` (Photon, Nominatim, OSRM) y B-13 tarifa sugerida.
 - **Tests:** suite pgTAP en CI (`supabase db start` + `supabase test db`), 380 tests con PR #15; tests Deno de `supabase/functions/geo` en el job `deno-geo`. Script de carrera de `accept_offer`: `supabase/tests/race/accept_offer_race.sh` (solo en DB descartable; no corre en CI).
 - **App móvil:** tema y componentes en `apps/mobile/src/{theme,components}`; pantalla de desarrollo `/dev-components`. El código del spike GPS (`/spike-gps`, `src/spike/`, `usesCleartextTraffic`) se retira antes del primer build de release (nota en C-03).
+- **Build local del dev APK:** `CI=1 npx expo prebuild -p android --no-install` borra `android/local.properties`; compilar con `ANDROID_HOME=$HOME/Android/Sdk ./gradlew assembleDebug --max-workers=2 -PreactNativeArchitectures=x86_64` y el emulador apagado (13 GB de RAM). Después `adb reverse tcp:8081 tcp:8081` + `npx expo start`.
 - **Supabase:** proyecto remoto `mrhwceepvcjcdntvnsgs` (plan Free, cuenta nueva del CTO) con las 11 migraciones aplicadas y verificadas por huella y la Edge Function `geo` (`verify_jwt` activo) desplegada. Plan Free pausa tras ~7 días sin uso: abrirlo antes de cada demo. Local: `supabase/.env` (ignorado por git) con las credenciales OAuth de Google.
 - **Docs:** [arte](arte.md) · [arquitectura](arquitectura.md) · [pantallas](pantallas.md) · [backlog](backlog.md) · [decisiones](decisiones.md) · [runbook admin](runbook-admin.md) · [spike GPS](spike-gps.md).
 
@@ -31,7 +32,8 @@ Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en códi
 - Sin costos en el MVP: Supabase Free, mapas OSM, cuenta de Google Play ya existente.
 
 ## No verificado
-- Login real con Google, unión real a canales Realtime por websocket, push, carga (B-17).
+- P-02: el teclado numérico tapa el botón "Continuar" de `/phone` (hay que bajar el teclado). Corregir con keyboard avoidance en P-03 o antes de la demo.
+- Unión real a canales Realtime por websocket, push, carga (B-17).
 - `geo` desplegada: solo se verificó el 401 sin JWT; falta una llamada con JWT real (depende del login).
 - GPS en teléfonos con ahorro de batería de fabricante (solo emulador).
 - Branch protection: no disponible en plan Free con repo privado (403).
