@@ -56,6 +56,7 @@ Salidas: `cancelled_passenger`, `cancelled_driver`, `expired`. Cada transición 
 - Palanca de escala (si se pasa de ~2.000 conductores en línea): ubicaciones en Redis (`GEOADD`/`GEOSEARCH`).
 
 ## Seguridad y privacidad
+- Realtime: solo Broadcast privado; los clientes solo leen (políticas sobre `realtime.messages` por tópico exacto). Todo evento, incluida la posición en vivo del viaje, lo emite el servidor.
 - RLS en el 100% de las tablas; lógica sensible solo en RPC `security definer` con `search_path` fijo.
 - Teléfono y ubicación de la contraparte visibles solo desde `assigned` hasta cerrar el viaje.
 - Bucket privado `driver-docs`: dueño escribe y lee lo suyo; admin lee con URLs firmadas cortas.

@@ -255,14 +255,14 @@ isOneToOne: false
                   ]
                 },"sos_events": {
                   Row: {
-                    "created_at": string,"handled_at": string | null,"handled_by": string | null,"id": string,"location": unknown,"ride_id": string | null,"user_id": string
+                    "client_event_id": string | null,"created_at": string,"handled_at": string | null,"handled_by": string | null,"id": string,"location": unknown,"ride_id": string | null,"user_id": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"handled_at"?: string | null,"handled_by"?: string | null,"id"?: string,"location"?: unknown,"ride_id"?: string | null,"user_id": string
+                    "client_event_id"?: string | null,"created_at"?: string,"handled_at"?: string | null,"handled_by"?: string | null,"id"?: string,"location"?: unknown,"ride_id"?: string | null,"user_id": string
                   }
                   Update: {
-                    "created_at"?: string,"handled_at"?: string | null,"handled_by"?: string | null,"id"?: string,"location"?: unknown,"ride_id"?: string | null,"user_id"?: string
+                    "client_event_id"?: string | null,"created_at"?: string,"handled_at"?: string | null,"handled_by"?: string | null,"id"?: string,"location"?: unknown,"ride_id"?: string | null,"user_id"?: string
                   }
                   Relationships: [
                     {
@@ -348,11 +348,20 @@ isOneToOne: false
 "make_offer":
 { Args: { "p_price_cents": number,"p_ride_id": string }; Returns: string
                            },
+"rate_ride":
+{ Args: { "p_comment"?: string,"p_ride_id": string,"p_stars": number }; Returns: undefined
+                           },
 "set_my_phone":
 { Args: { "p_phone": string }; Returns: undefined
                            },
 "start_ride":
 { Args: { "p_ride_id": string }; Returns: undefined
+                           },
+"trigger_sos":
+{ Args: { "p_client_event_id": string,"p_lat": number,"p_lng": number,"p_ride_id"?: string }; Returns: string
+                           },
+"upsert_driver_location":
+{ Args: { "p_heading"?: number,"p_is_online"?: boolean,"p_lat": number,"p_lng": number,"p_speed"?: number }; Returns: undefined
                            }
           }
           Enums: {
