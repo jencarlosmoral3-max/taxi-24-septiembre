@@ -4,7 +4,6 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   StyleSheet,
   useWindowDimensions,
@@ -46,7 +45,7 @@ export function BottomSheet({ visible, onClose, title, children }: Props) {
         accessibilityLabel="Cerrar"
       />
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior="padding"
         style={styles.kav}
         pointerEvents="box-none"
       >
