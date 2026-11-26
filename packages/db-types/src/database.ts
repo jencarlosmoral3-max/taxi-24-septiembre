@@ -311,7 +311,16 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "get_my_driver_application":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "approved_at": string,"rejected_reason": string,"status": Database["public"]['Enums']["driver_status"],"union_member_number": string
+            }[]
+                           },
+"get_ride_contact":
+{ Args: { "p_ride_id": string }; Returns: {
+              "full_name": string,"phone": string
+            }[]
+                           }
           }
           Enums: {
             "document_status": "pending"|"approved"|"rejected","document_type": "license"|"ci_front"|"ci_back"|"ruat"|"soat"|"vehicle_photo"|"selfie","driver_status": "pending"|"approved"|"suspended"|"rejected","offer_status": "active"|"accepted"|"rejected"|"expired"|"withdrawn","ride_status": "requested"|"assigned"|"driver_arrived"|"in_progress"|"completed"|"cancelled_passenger"|"cancelled_driver"|"expired"

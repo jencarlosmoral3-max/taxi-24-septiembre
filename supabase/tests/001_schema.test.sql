@@ -7,7 +7,8 @@ select is(
     join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'public' and c.relkind in ('r', 'p') and not c.relrowsecurity),
   null, 'RLS activada en todas las tablas de public');
-select is((select count(*)::int from pg_policies where schemaname = 'public'), 0, 'sin políticas aún (deny-all, B-02)');
+select is((select count(*)::int from pg_tables t where t.schemaname = 'public'
+  and not exists (select 1 from pg_policies p where p.schemaname = 'public' and p.tablename = t.tablename)), 0, 'toda tabla de public tiene al menos una política (B-02)');
 
 select has_index('public', 'rides', 'rides_one_open_per_passenger', 'índice 1 pedido abierto por pasajero');
 select has_index('public', 'rides', 'rides_one_active_per_driver', 'índice 1 viaje activo por conductor');
@@ -16,7 +17,7 @@ select has_index('public', 'driver_locations', 'driver_locations_online_gist', '
 
 select has_index('public', 'ride_offers', 'ride_offers_one_accepted_per_ride', 'índice 1 oferta aceptada por viaje');
 
--- Privilegios: anon/authenticated no tienen nada hasta B-02.
+-- Privilegios: anon nada; authenticated solo select en rides (escrituras por RPC).
 select ok(not has_table_privilege('anon', 'public.rides', 'select'), 'anon sin select en rides');
 select ok(not has_table_privilege('authenticated', 'public.rides', 'insert'), 'authenticated sin insert en rides');
 select ok(not has_table_privilege('authenticated', 'public.rides', 'update'), 'authenticated sin update en rides');
