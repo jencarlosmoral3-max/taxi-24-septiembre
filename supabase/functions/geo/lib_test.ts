@@ -1,4 +1,4 @@
-import { clearCache, handle, type Deps } from "./lib.ts";
+import { clearCache, handle, parseGeometry, type Deps } from "./lib.ts";
 
 const eq = (a: unknown, b: unknown) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${JSON.stringify(a)} != ${JSON.stringify(b)}`); };
 
@@ -206,4 +206,32 @@ Deno.test("route: resultado vacío no se cachea", async () => {
   eq((await handle(post({ op: "route", from: FROM, to: TO }), d)).status, 502);
   eq((await handle(post({ op: "route", from: FROM, to: TO }), d)).status, 502);
   eq(calls.length, 2);
+});
+
+Deno.test("route: geometry de Geoapify (legs de {lat,lon}) -> [lng,lat][] sin romper la tarifa", async () => {
+  const geometry = [[{ lat: -17.78, lon: -63.18 }, { lat: -17.79, lon: -63.19 }], [{ lat: -17.79, lon: -63.19 }, { lat: -17.8123456, lon: -63.2 }]];
+  const r = await handle(post({ op: "route", from: FROM, to: TO }), mk({ [O]: () => J({ results: [{ distance: 5040.4, time: 601.2, geometry }] }) }).d);
+  eq(await r.json(), { distance_m: 5040, duration_s: 601, suggested_fare_cents: 1600, geometry: [[-63.18, -17.78], [-63.19, -17.79], [-63.2, -17.81235]] });
+});
+
+Deno.test("parseGeometry: formas válidas, ausente y malformada", () => {
+  eq(parseGeometry([[[-63.1, -17.7], [-63.2, -17.8]]]), [[-63.1, -17.7], [-63.2, -17.8]]); // legs de [lng,lat]
+  eq(parseGeometry([{ lat: -17.7, lon: -63.1 }, { lat: -17.8, lon: -63.2 }]), [[-63.1, -17.7], [-63.2, -17.8]]); // plano
+  for (const bad of [undefined, null, "x", [], [[]], [[{ lat: -17.7, lon: -63.1 }]], [[{ lat: "a", lon: 1 }, { lat: 1, lon: 2 }]], [[{ lat: NaN, lon: -63 }, { lat: -17.7, lon: -63.1 }]], [[{ lat: 10, lon: 10 }, { lat: 11, lon: 11 }]]]) eq(parseGeometry(bad), undefined);
+  const many = [Array.from({ length: 1000 }, (_, i) => ({ lat: -17.7 - i * 1e-4, lon: -63.1 }))];
+  const s = parseGeometry(many)!;
+  eq(s.length, 200); eq(s[0], [-63.1, -17.7]); eq(s[199], [-63.1, -17.7999]);
+});
+
+Deno.test("route: geometry inválida no rompe la tarifa", async () => {
+  const r = await handle(post({ op: "route", from: FROM, to: TO }), mk({ [O]: () => J({ results: [{ distance: 5040.4, time: 601.2, geometry: "basura" }] }) }).d);
+  eq(await r.json(), { distance_m: 5040, duration_s: 601, suggested_fare_cents: 1600 });
+});
+
+Deno.test("route: segunda llamada sale de la caché con la misma geometry y un solo fetch", async () => {
+  const geometry = [[{ lat: -17.78, lon: -63.18 }, { lat: -17.8, lon: -63.2 }]];
+  const { d, calls } = mk({ [O]: () => J({ results: [{ distance: 5040.4, time: 601.2, geometry }] }) });
+  const a = await (await handle(post({ op: "route", from: FROM, to: TO }), d)).json();
+  const b = await (await handle(post({ op: "route", from: FROM, to: TO }), d)).json();
+  eq(a, b); eq(calls.length, 1); eq(b.geometry, [[-63.18, -17.78], [-63.2, -17.8]]);
 });

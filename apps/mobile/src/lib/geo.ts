@@ -1,4 +1,5 @@
 import { FunctionsHttpError } from '@supabase/supabase-js';
+import { useQuery } from '@tanstack/react-query';
 
 import { supabase } from '@/lib/supabase';
 import type { Place } from '@/store/tripDraft';
@@ -23,3 +24,23 @@ export async function geoReverse(lat: number, lng: number): Promise<{ name: stri
 }
 
 export const httpStatus = (e: unknown) => (e instanceof FunctionsHttpError ? (e.context as Response).status : undefined);
+
+type LatLng = { lat: number; lng: number };
+const r5 = (n: number) => Math.round(n * 1e5) / 1e5;
+
+// Geometria [lng, lat][] de la ruta por calles (la misma llamada `route` ya cacheada en el backend); undefined si falta o falla.
+export function useRoute(origin?: LatLng | null, destination?: LatLng | null) {
+  const from = origin && { lat: r5(origin.lat), lng: r5(origin.lng) };
+  const to = destination && { lat: r5(destination.lat), lng: r5(destination.lng) };
+  return useQuery({
+    queryKey: ['geo-route', from, to],
+    enabled: !!from && !!to,
+    staleTime: 60 * 60_000,
+    retry: false, // el fallback es la recta; reintentar gasta otra cuota
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('geo', { body: { op: 'route', from, to } });
+      if (error) throw error;
+      return (data as { geometry?: [number, number][] }).geometry ?? null;
+    },
+  });
+}

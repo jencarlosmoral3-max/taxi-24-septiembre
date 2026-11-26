@@ -1,4 +1,4 @@
-// Proxy geo provider-agnostic: la app solo ve {id,name,address,lat,lng} / {name,address} / {distance_m,duration_s,suggested_fare_cents}.
+// Proxy geo provider-agnostic: la app solo ve {id,name,address,lat,lng} / {name,address} / {distance_m,duration_s,suggested_fare_cents,geometry?: [lng,lat][]}.
 // Proveedor: Geoapify (plan gratis: 3000 créditos/día, API key en el secret GEOAPIFY_API_KEY). Photon y Nominatim públicos
 // responden 403 a las IPs de Supabase Edge, así que no son opción. La key viaja en la URL: la URL nunca se loguea ni se lanza en errores.
 // La cuota por usuario (consume_geo_quota) y la caché acotan el consumo; si el volumen crece, cambiar de plan/proveedor aquí sin tocar la app.
@@ -129,6 +129,36 @@ async function reverse(f: Fetch, rpc: Rpc, key: string, b: Any): Promise<{ name:
   });
 }
 
+// Geoapify format=json: results[0].geometry = legs[] de puntos {lat,lon}. Se aceptan también legs de [lng,lat] y un leg plano.
+// Devuelve [lng,lat][] redondeado a 5 decimales y reducido a <= MAX_GEOM_POINTS, o undefined si no es válida (no rompe la tarifa).
+export const MAX_GEOM_POINTS = 200;
+export function parseGeometry(g: unknown): [number, number][] | undefined {
+  if (!Array.isArray(g)) return undefined;
+  const pts: [number, number][] = [];
+  const add = (p: Any) => {
+    const lng = Array.isArray(p) ? p[0] : p?.lon, lat = Array.isArray(p) ? p[1] : p?.lat;
+    if (!isNum(lat) || !isNum(lng) || !inBolivia(lat, lng)) return false;
+    const last = pts[pts.length - 1];
+    if (!last || last[0] !== lng || last[1] !== lat) pts.push([lng, lat]); // une legs sin duplicar el punto compartido
+    return true;
+  };
+  for (const leg of g) {
+    const isPoint = !Array.isArray(leg) || (leg.length === 2 && isNum(leg[0]));
+    if (isPoint) { if (!add(leg)) return undefined; } else for (const p of leg) if (!add(p)) return undefined;
+  }
+  if (pts.length < 2) return undefined;
+  const out = simplify(pts, MAX_GEOM_POINTS);
+  return out.map(([x, y]) => [Math.round(x * 1e5) / 1e5, Math.round(y * 1e5) / 1e5]);
+}
+
+// shortcut: stride en vez de Douglas-Peucker; con 200 puntos en <150 km la forma sigue siendo fiel a escala de mapa.
+function simplify(pts: [number, number][], max: number): [number, number][] {
+  if (pts.length <= max) return pts;
+  const out: [number, number][] = [];
+  for (let i = 0; i < max; i++) out.push(pts[Math.round((i * (pts.length - 1)) / (max - 1))]);
+  return out;
+}
+
 async function route(f: Fetch, rpc: Rpc, key: string, b: Any) {
   const from = coord(b.from), to = coord(b.to);
   if (km(from, to) > MAX_ROUTE_KM) throw new HttpError(422, "invalid_route");
@@ -139,18 +169,20 @@ async function route(f: Fetch, rpc: Rpc, key: string, b: Any) {
       const j = await getJson(f, `${API}/routing?waypoints=${from.lat},${from.lng}|${to.lat},${to.lng}&mode=drive&format=json&apiKey=${encodeURIComponent(key)}`, T_ROUTE) as Any;
       const leg = j?.results?.[0];
       if (!leg) throw new Error("empty route"); // no se cachea un resultado vacío
-      return leg;
+      return { distance: leg.distance as unknown, time: leg.time as unknown, geometry: parseGeometry(leg.geometry) }; // se cachea lo procesado, no el leg crudo
+
     } catch (e) {
       console.error("geo upstream", "route", String(e));
       throw new HttpError(502, "upstream_error");
     }
-  }) as Any;
+  });
   if (!isNum(leg.distance) || !isNum(leg.time)) throw new HttpError(502, "upstream_error");
   const distance_m = Math.round(leg.distance), duration_s = Math.round(leg.time);
   const { data, error } = await rpc("suggest_fare", { p_distance_m: distance_m, p_duration_s: duration_s });
   if (error?.message?.includes("invalid_route")) throw new HttpError(422, "invalid_route");
   if (error || !isNum(data)) throw new HttpError(500, "internal_error");
-  return { distance_m, duration_s, suggested_fare_cents: data };
+  const { geometry } = leg;
+  return { distance_m, duration_s, suggested_fare_cents: data, ...(geometry && { geometry }) };
 }
 
 export type Deps = {
