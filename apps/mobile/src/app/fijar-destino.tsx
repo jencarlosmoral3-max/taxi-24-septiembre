@@ -68,11 +68,11 @@ export default function FijarDestino() {
           <Text variant="body14">{saveKind ? `Mueve el mapa hasta tu ${saveLabel}` : 'Mueve el mapa hasta el punto de destino'}</Text>
         </View>
       </View>
-      <View accessible accessibilityLabel="Destino en el centro del mapa" pointerEvents="none" style={styles.pin} />
+      <View accessible accessibilityLabel={saveKind ? `Tu ${saveLabel} en el centro del mapa` : 'Destino en el centro del mapa'} pointerEvents="none" style={styles.pin} />
       <View style={[styles.bottom, { paddingBottom: insets.bottom + theme.spacing.md }]}>
         {outside && (
           <Text color={theme.colors.danger} accessibilityLiveRegion="polite">
-            Ese punto está fuera del área de servicio (Santa Cruz).
+            {saveKind ? `Tu ${saveLabel} debe estar dentro del área de servicio (Santa Cruz).` : 'Ese punto está fuera del área de servicio (Santa Cruz).'}
           </Text>
         )}
         <Button label={saveKind ? `Guardar ${saveLabel}` : 'Confirmar destino'} onPress={confirm} loading={busy} />

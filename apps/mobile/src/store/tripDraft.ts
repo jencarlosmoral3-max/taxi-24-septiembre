@@ -21,7 +21,7 @@ type TripDraft = {
   setDestination: (p: Place | null) => void;
 };
 
-const EMPTY = { origin: null, destination: null, recents: [] };
+const EMPTY = { origin: null, destination: null, recents: [], saved: {} };
 
 export const useTripDraft = create<TripDraft>()(
   persist(

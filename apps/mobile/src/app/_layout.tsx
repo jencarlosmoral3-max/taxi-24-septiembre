@@ -59,8 +59,9 @@ function Gate() {
   const seenOnboarding = useOnboarding((s) => s.seen);
   const modeHydrated = useAppMode((s) => s.hydrated);
   const onboardingHydrated = useOnboarding((s) => s.hydrated);
-  const profileDone = useProfileSetup((s) => s.done);
   const profileHydrated = useProfileSetup((s) => s.hydrated);
+  // Si la hidratacion expiro sin reportar, no forzar registro a quien ya lo completo.
+  const profileDone = useProfileSetup((s) => s.done) || !profileHydrated;
   const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
   const storesReady = (modeHydrated && onboardingHydrated && profileHydrated) || hydrationTimedOut; // si la hidratacion no reporta en 4 s, seguir con defaults
 

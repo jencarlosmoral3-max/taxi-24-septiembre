@@ -3,6 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 
 import { resetDemo } from '@/demo/reset';
 import { useAppMode } from '@/store/appMode';
+import { useProfileSetup } from '@/store/profileSetup';
 import { useTripDraft } from '@/store/tripDraft';
 
 import { supabase } from './supabase';
@@ -47,7 +48,9 @@ export async function signOut() {
   await supabase.auth.signOut({ scope: 'local' });
   // Privacidad: otra cuenta en el mismo telefono no debe ver recientes ni viaje anterior.
   useTripDraft.getState().reset();
+  useProfileSetup.getState().reset();
   useAppMode.getState().setMode('passenger');
   resetDemo();
   await useTripDraft.persist.clearStorage();
+  await useProfileSetup.persist.clearStorage();
 }

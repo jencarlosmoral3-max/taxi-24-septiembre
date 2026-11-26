@@ -26,10 +26,10 @@ export default function Registro() {
       style={[styles.container, { paddingTop: insets.top + theme.spacing['3xl'], paddingBottom: insets.bottom + theme.spacing.xl }]}
     >
       <View style={styles.body}>
-        <Text variant="title24">¿Cómo te llamamos?</Text>
+        <Text variant="title24" accessibilityRole="header">¿Cómo te llamamos?</Text>
         <Text muted>Tu nombre y tu foto ayudan a que el conductor te reconozca en el punto de recogida.</Text>
         <View style={styles.photoBox}>
-          <View style={[styles.avatar, photo && styles.avatarOn]} accessible accessibilityLabel={photo ? 'Foto de perfil de ejemplo' : 'Sin foto de perfil'}>
+          <View style={[styles.avatar, photo && styles.avatarOn]} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
             <MaterialCommunityIcons name={photo ? 'account' : 'camera-outline'} size={AVATAR / 2} color={photo ? theme.colors.onPrimary : theme.colors.textMuted} />
           </View>
           <Pressable

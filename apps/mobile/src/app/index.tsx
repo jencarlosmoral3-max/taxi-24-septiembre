@@ -7,6 +7,7 @@ import { AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text, VyroMap } from '@/components';
+import { useOnboarding } from '@/store/onboarding';
 import { useTripDraft } from '@/store/tripDraft';
 import { useAppMode } from '@/store/appMode';
 import { theme } from '@/theme/theme';
@@ -25,11 +26,12 @@ function PassengerHome() {
   const insets = useSafeAreaInsets();
   const camera = useRef<CameraRef>(null);
   const centered = useRef(false);
-  const dismissed = useRef(false);
   const [perm, setPerm] = useState<Perm>('loading');
   const [canAskAgain, setCanAskAgain] = useState(true);
   const [fix, setFix] = useState<LngLat | null>(null);
   const [servicesOff, setServicesOff] = useState(false);
+  const [noFix, setNoFix] = useState(false);
+  const noFixRef = useRef(false);
   const [mapKey, setMapKey] = useState(0);
   const [mapError, setMapError] = useState(false);
   const destination = useTripDraft((s) => s.destination);
@@ -41,7 +43,7 @@ function PassengerHome() {
 
   const apply = useCallback((p: Location.LocationPermissionResponse) => {
     setCanAskAgain(p.canAskAgain);
-    setPerm(p.granted ? 'granted' : p.canAskAgain && p.status === 'undetermined' && !dismissed.current ? 'ask' : 'denied');
+    setPerm(p.granted ? 'granted' : p.canAskAgain && p.status === 'undetermined' && !useOnboarding.getState().locationAsked ? 'ask' : 'denied');
   }, []);
 
   // Al volver de Ajustes se relee el permiso; nunca se pide aqui.
@@ -65,6 +67,7 @@ function PassengerHome() {
       ({ coords }) => {
         const c: LngLat = [coords.longitude, coords.latitude];
         setFix(c);
+        if (noFixRef.current) return; // el usuario ya fija el punto a mano: no saltar
         const k = `${c[0].toFixed(4)},${c[1].toFixed(4)}`;
         if (k !== lastFixKey.current) {
           lastFixKey.current = k;
@@ -84,19 +87,30 @@ function PassengerHome() {
 
   const request = () => Location.requestForegroundPermissionsAsync().then(apply, () => setPerm('denied'));
 
-  const pinMode = perm === 'denied' || (perm === 'granted' && servicesOff);
+  // Sin fix GPS en 8 s (emulador, interior): pasar al modo pin para no dejar al usuario sin origen.
+  useEffect(() => {
+    if (perm !== 'granted' || servicesOff || fix) return;
+    const t = setTimeout(() => {
+      noFixRef.current = true;
+      setNoFix(true);
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [perm, servicesOff, fix]);
+
+  const pinMode = perm === 'denied' || (perm === 'granted' && (servicesOff || noFix));
   useEffect(() => {
     if (!pinMode) return;
     lastFixKey.current = ''; // el origen pasa a ser el centro del mapa: el proximo fix GPS debe reaplicarse
     const c = lastCenter.current ?? SANTA_CRUZ;
     setOriginAt(c[0], c[1]);
   }, [pinMode, setOriginAt]);
+  if (perm === 'loading') return <View style={styles.container} />; // evita montar el mapa y desmontarlo si sale la explicacion
   if (perm === 'ask') {
     return (
       <LocationPrePrompt
         onAllow={request}
         onSkip={() => {
-          dismissed.current = true;
+          useOnboarding.getState().markLocationAsked();
           setPerm('denied');
         }}
       />
@@ -153,6 +167,11 @@ function PassengerHome() {
               onPress={() => Location.enableNetworkProviderAsync().then(check, () => {})}
             />
           </Card>
+        ) : perm === 'granted' && noFix ? (
+          <Card
+            title="No encontramos tu ubicación"
+            body="Mueve el mapa para fijar el punto de recogida."
+          />
         ) : pinMode ? (
           <Card
             title="Fija tu punto en el mapa"
@@ -205,6 +224,9 @@ function LocationPrePrompt({ onAllow, onSkip }: { onAllow: () => void; onSkip: (
   ];
   return (
     <View style={[styles.pre, { paddingTop: insets.top + theme.spacing['3xl'], paddingBottom: insets.bottom + theme.spacing.xl }]}>
+      <View style={[styles.signOut, { top: insets.top + theme.spacing.xs }]}>
+        <Button label="Perfil" variant="secondary" onPress={() => router.push('/perfil')} />
+      </View>
       <View style={styles.preBody}>
         <View style={styles.preIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
           <MaterialCommunityIcons name="crosshairs-gps" size={theme.size.icon * 2} color={theme.colors.primary} />
@@ -227,7 +249,7 @@ function LocationPrePrompt({ onAllow, onSkip }: { onAllow: () => void; onSkip: (
   );
 }
 
-function Card({ title, body, children }: { title: string; body: string; children: React.ReactNode }) {
+function Card({ title, body, children }: { title: string; body: string; children?: React.ReactNode }) {
   return (
     <View style={styles.card}>
       <Text variant="title18">{title}</Text>

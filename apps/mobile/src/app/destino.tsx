@@ -12,8 +12,10 @@ import { theme } from '@/theme/theme';
 export default function Destino() {
   const insets = useSafeAreaInsets();
   const origin = useTripDraft((s) => s.origin);
-  const recents = useTripDraft((s) => s.recents);
+  const allRecents = useTripDraft((s) => s.recents);
   const saved = useTripDraft((s) => s.saved);
+  // Un lugar guardado no se repite en Recientes.
+  const recents = allRecents.filter((r) => ![saved.home, saved.work].some((p) => p && p.lat === r.lat && p.lng === r.lng));
   const setDestination = useTripDraft((s) => s.setDestination);
   const [text, setText] = useState('');
   const [q, setQ] = useState('');
