@@ -320,6 +320,9 @@ isOneToOne: false
 "complete_ride":
 { Args: { "p_ride_id": string }; Returns: undefined
                            },
+"consume_geo_quota":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "create_ride":
 { Args: { "p_comment"?: string,"p_dest_lat": number,"p_dest_lng": number,"p_dest_text": string,"p_offered_fare_cents": number,"p_origin_lat": number,"p_origin_lng": number,"p_origin_text": string,"p_passenger_count"?: number }; Returns: string
                            },
@@ -328,6 +331,9 @@ isOneToOne: false
                            },
 "expire_stale":
 { Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"geo_upstream_slot":
+{ Args: { "p_provider": string }; Returns: boolean
                            },
 "get_my_driver_application":
 { Args: Record<PropertyKey, never>; Returns: {
@@ -356,6 +362,9 @@ isOneToOne: false
                            },
 "start_ride":
 { Args: { "p_ride_id": string }; Returns: undefined
+                           },
+"suggest_fare":
+{ Args: { "p_distance_m": number,"p_duration_s": number }; Returns: number
                            },
 "trigger_sos":
 { Args: { "p_client_event_id": string,"p_lat": number,"p_lng": number,"p_ride_id"?: string }; Returns: string
