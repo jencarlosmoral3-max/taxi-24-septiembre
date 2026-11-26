@@ -28,6 +28,7 @@ type State = {
   finish: () => void;
   cancel: () => void;
   reset: () => void; // despues de cobrar: vuelve al home
+  wipe: () => void; // cierre de sesion / cambio de modo: todo a cero
 };
 
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -58,7 +59,7 @@ export const useDemoDriver = create<State>((set, get) => {
     setOnline: (on) => {
       set({ online: on });
       if (!on) {
-        if (get().phase === 'idle' || get().phase === 'incoming') toIdle();
+        if (['idle', 'incoming', 'waiting'].includes(get().phase)) toIdle();
       } else if (get().phase === 'idle') scheduleRequest();
     },
     ignore: toIdle,
@@ -78,5 +79,9 @@ export const useDemoDriver = create<State>((set, get) => {
     },
     cancel: toIdle,
     reset: toIdle,
+    wipe: () => {
+      clear();
+      set({ application: 'none', online: false, phase: 'idle', request: null, offeredCents: null, earnings: DEMO_EARNINGS });
+    },
   };
 });

@@ -58,7 +58,13 @@ function Gate() {
   const seenOnboarding = useOnboarding((s) => s.seen);
   const modeHydrated = useAppMode((s) => s.hydrated);
   const onboardingHydrated = useOnboarding((s) => s.hydrated);
-  const storesReady = modeHydrated && onboardingHydrated;
+  const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
+  const storesReady = (modeHydrated && onboardingHydrated) || hydrationTimedOut; // si la hidratacion no reporta en 4 s, seguir con defaults
+
+  useEffect(() => {
+    const t = setTimeout(() => setHydrationTimedOut(true), 4000);
+    return () => clearTimeout(t);
+  }, []);
 
   const ready = sessionLoaded && storesReady;
 

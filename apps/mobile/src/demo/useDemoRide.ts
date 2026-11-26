@@ -54,17 +54,18 @@ export const useDemoRide = create<State>((set, get) => ({
           expiresAt: Date.now() + OFFER_TTL_MS,
         };
         set((s) => ({ offers: [...s.offers, offer] }));
+        later(() => set((s) => ({ offers: s.offers.filter((o) => o.id !== offer.id) })), OFFER_TTL_MS);
       }, OFFER_EVERY_MS * (i + 1)),
     );
   },
   raiseFare: (cents) => {
-    if (get().status === 'requested') set({ fareCents: cents });
+    if (get().status === 'requested') set((s) => ({ fareCents: cents, offers: s.offers.filter((o) => o.price_cents >= cents) }));
   },
   acceptOffer: (offerId) => {
     const { status, offers } = get();
     const offer = offers.find((o) => o.id === offerId);
     const driver = DEMO_OFFER_TEMPLATES.find((t) => t.driver.profile.id === offer?.driver_id)?.driver;
-    if (status !== 'requested' || !offer || !driver) return;
+    if (status !== 'requested' || !offer || !driver || offer.expiresAt < Date.now()) return;
     clearTimers();
     set({ status: 'assigned', driver, etaMin: offer.etaMin, finalFareCents: offer.price_cents, offers: [] });
     for (let t = ETA_TICK_MS; t < ARRIVE_AFTER_MS; t += ETA_TICK_MS) {
@@ -79,6 +80,7 @@ export const useDemoRide = create<State>((set, get) => ({
     if (get().status === 'in_progress') set({ status: 'completed' });
   },
   cancel: (reason) => {
+    if (!['requested', 'assigned', 'driver_arrived'].includes(get().status)) return;
     clearTimers();
     set({ status: 'cancelled_passenger', cancelReason: reason, offers: [] });
   },

@@ -1,6 +1,8 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
+import { resetDemo } from '@/demo/reset';
+import { useAppMode } from '@/store/appMode';
 import { useTripDraft } from '@/store/tripDraft';
 
 import { supabase } from './supabase';
@@ -46,4 +48,6 @@ export async function signOut() {
   // Privacidad: otra cuenta en el mismo telefono no debe ver recientes ni viaje anterior.
   useTripDraft.getState().reset();
   await useTripDraft.persist.clearStorage();
+  useAppMode.getState().setMode('passenger');
+  resetDemo();
 }

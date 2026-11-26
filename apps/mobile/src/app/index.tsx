@@ -32,6 +32,7 @@ function PassengerHome() {
   const [mapKey, setMapKey] = useState(0);
   const [mapError, setMapError] = useState(false);
   const destination = useTripDraft((s) => s.destination);
+  const origin = useTripDraft((s) => s.origin);
   const setOrigin = useTripDraft((s) => s.setOrigin);
   const lastCenter = useRef<LngLat | null>(null);
   const lastFixKey = useRef('');
@@ -185,7 +186,7 @@ function PassengerHome() {
             )}
           </Pressable>
         )}
-        {destination && !mapError && perm !== 'ask' && <Button label="Continuar" onPress={() => router.push('/viaje/tarifa')} />}
+        {origin && destination && !mapError && perm !== 'ask' && <Button label="Continuar" onPress={() => router.push('/viaje/tarifa')} />}
       </View>
     </View>
   );
