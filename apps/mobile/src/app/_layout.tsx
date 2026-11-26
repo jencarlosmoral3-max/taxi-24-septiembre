@@ -5,8 +5,11 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { SessionProvider, useMyPhone, useSession } from '@/lib/auth';
+import { Button, Text } from '@/components';
 import { theme } from '@/theme/theme';
 
 import '../spike/gps-task'; // SPIKE F-06: registra la task tambien en arranque headless
@@ -31,17 +34,52 @@ export default function RootLayout() {
     return () => clearTimeout(t);
   }, []);
 
-  useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => {});
-  }, [ready]);
-
   if (!ready) return null;
   return (
     <QueryClientProvider client={queryClient}>
       <SafeAreaProvider>
         <StatusBar style="light" />
-        <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.bg } }} />
+        <SessionProvider>
+          <Gate />
+        </SessionProvider>
       </SafeAreaProvider>
     </QueryClientProvider>
+  );
+}
+
+// Sin sesion -> /login; con sesion y sin telefono -> /phone; si no, el resto de la app.
+function Gate() {
+  const session = useSession();
+  const phone = useMyPhone(session?.user.id);
+  const loading = session === undefined || (!!session && phone.isPending && !phone.isError);
+
+  useEffect(() => {
+    if (!loading) SplashScreen.hideAsync().catch(() => {});
+  }, [loading]);
+
+  if (loading) return null;
+  if (session && phone.isError) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', gap: theme.spacing.md, padding: theme.size.screenPadding }}>
+        <Text variant="title20">No pudimos cargar tu cuenta</Text>
+        <Text muted>Revisa tu conexión e inténtalo de nuevo.</Text>
+        <Button label="Reintentar" onPress={() => phone.refetch()} loading={phone.isFetching} />
+      </View>
+    );
+  }
+  const hasSession = !!session;
+  const hasPhone = !!phone.data;
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.bg } }}>
+      <Stack.Protected guard={!hasSession}>
+        <Stack.Screen name="login" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasSession && !hasPhone}>
+        <Stack.Screen name="phone" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasSession && hasPhone}>
+        <Stack.Screen name="index" />
+      </Stack.Protected>
+    </Stack>
   );
 }
