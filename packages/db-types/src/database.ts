@@ -311,7 +311,11 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "get_ride_contact":
+{ Args: { "p_ride_id": string }; Returns: {
+              "full_name": string,"phone": string
+            }[]
+                           }
           }
           Enums: {
             "document_status": "pending"|"approved"|"rejected","document_type": "license"|"ci_front"|"ci_back"|"ruat"|"soat"|"vehicle_photo"|"selfie","driver_status": "pending"|"approved"|"suspended"|"rejected","offer_status": "active"|"accepted"|"rejected"|"expired"|"withdrawn","ride_status": "requested"|"assigned"|"driver_arrived"|"in_progress"|"completed"|"cancelled_passenger"|"cancelled_driver"|"expired"

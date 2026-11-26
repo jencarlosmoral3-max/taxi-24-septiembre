@@ -110,11 +110,13 @@ CA: RLS activado en 100% de tablas · tests pgTAP de acceso cruzado (pasajero A 
 ### B-03 · Auth por teléfono (OTP SMS)
 labels: backend, seguridad | High | B-01, F-05
 Supabase Auth phone con Twilio Verify: **WhatsApp como canal primario, SMS como respaldo** (costo y entregabilidad en Entel/Tigo/Viva). Trigger que crea `profiles`. Rate limit de OTP. Claim `role` para admin.
+Nota (B-02): `profiles` no tiene grant de insert; el trigger sobre `auth.users` crea el perfil de **todo** usuario, admins incluidos (`config_audit.changed_by` referencia `profiles`).
 CA: login completo con número +591 real por WhatsApp y por SMS · rate limit verificado · admin solo por claim asignado manualmente.
 
 ### B-04 · Storage de documentos de conductor
 labels: backend, seguridad | High | B-02
 Bucket privado `driver-docs`; solo dueño escribe/lee lo suyo; admin lee todo. URLs firmadas de corta duración.
+Nota (B-02): las políticas del bucket replican la regla de la tabla: el path empieza con `<auth.uid()>/`. Reemplazar un documento rechazado requiere RPC (no hay grant de update/delete en `driver_documents`).
 CA: test: otro conductor no puede leer documentos ajenos.
 
 ### B-05 · RPC `create_ride` + búsqueda de conductores cercanos
@@ -243,6 +245,7 @@ CA: eliminar cuenta borra/anonimiza datos personales.
 ### C-01 · Registro de conductor en 4 pasos
 labels: app | Medium | P-02, B-04, D-07
 Datos + nº interno, licencia + CI, vehículo (placa, RUAT, SOAT), fotos. Compresión de imágenes antes de subir.
+Nota (B-02): un conductor aprobado no puede editar vehículos por la API (solo `pending`/`rejected`); renovar SOAT o cambiar de auto va por RPC. `ruat` y `soat_expires_at` no se leen por la API: RPC del dueño.
 CA: reanuda si se cierra la app a mitad · fotos < 1 MB.
 
 ### C-02 · Estado pendiente de aprobación y switch de modo
@@ -284,6 +287,7 @@ CA: usuario sin claim recibe 403.
 ### A-02 · Aprobación de conductores
 labels: web | Medium | A-01, B-04
 Ver documentos (URLs firmadas), aprobar/rechazar con motivo.
+Nota (B-02): aprobar/rechazar va por RPC de admin (no hay grant de update sobre `drivers.status`). Al aprobar, limpiar `rejected_reason`.
 CA: cambio de estado notifica al conductor.
 
 ### A-03 · Padrón de conductores y vehículos
