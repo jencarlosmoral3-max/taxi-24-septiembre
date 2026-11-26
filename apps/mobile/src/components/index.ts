@@ -7,6 +7,7 @@ export { OnlineToggle } from './OnlineToggle';
 export { isValidBoMobile, PhoneField } from './PhoneField';
 export { RatingStars } from './RatingStars';
 export { RequestCard } from './RequestCard';
+export { VyroMap } from './VyroMap';
 export { tabBarOptions } from './tabBarOptions';
 export { Text } from './Text';
 export { TextField } from './TextField';

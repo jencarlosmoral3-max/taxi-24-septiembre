@@ -1,14 +1,13 @@
-import { Camera, Map, type LngLat, type StyleSpecification } from '@maplibre/maplibre-react-native';
+import { Camera, type LngLat } from '@maplibre/maplibre-react-native';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Text } from '@/components';
+import { Button, Text, VyroMap } from '@/components';
 import { geoReverse, SERVICE_BBOX } from '@/lib/geo';
 import { useTripDraft } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
-import vyroDark from '../../assets/map/vyro-dark.json';
 
 const SANTA_CRUZ: LngLat = [-63.1821, -17.7833];
 const REVERSE_TIMEOUT_MS = 4000;
@@ -46,19 +45,14 @@ export default function FijarDestino() {
 
   return (
     <View style={styles.container}>
-      <Map
+      <VyroMap
         style={styles.map}
-        mapStyle={vyroDark as StyleSpecification}
-        touchPitch={false}
-        compass={false}
-        logo={false}
-        attributionPosition={{ top: insets.top + theme.spacing.xs, left: theme.spacing.xs }}
         onRegionDidChange={(e) => {
           center.current = e.nativeEvent.center as LngLat;
         }}
       >
         <Camera initialViewState={{ center: start, zoom: origin ? 16 : 14 }} />
-      </Map>
+      </VyroMap>
       <View pointerEvents="none" style={[styles.hint, { top: insets.top + theme.spacing.xs }]}>
         <View style={styles.chip}>
           <Text variant="body14">Mueve el mapa hasta el punto de destino</Text>

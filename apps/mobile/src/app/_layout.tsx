@@ -10,6 +10,8 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useMyPhone, useSession } from '@/lib/auth';
 import { Button, Text } from '@/components';
+import { useAppMode } from '@/store/appMode';
+import { useOnboarding } from '@/store/onboarding';
 import { theme } from '@/theme/theme';
 
 import '../spike/gps-task'; // SPIKE F-06: registra la task tambien en arranque headless
@@ -52,12 +54,19 @@ function Gate() {
   const session = useSession();
   const phone = useMyPhone(session?.user.id);
   const sessionLoaded = session !== undefined;
+  const mode = useAppMode((s) => s.mode);
+  const seenOnboarding = useOnboarding((s) => s.seen);
+  const modeHydrated = useAppMode((s) => s.hydrated);
+  const onboardingHydrated = useOnboarding((s) => s.hydrated);
+  const storesReady = modeHydrated && onboardingHydrated;
+
+  const ready = sessionLoaded && storesReady;
 
   useEffect(() => {
-    if (sessionLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [sessionLoaded]);
+    if (ready) SplashScreen.hideAsync().catch(() => {});
+  }, [ready]);
 
-  if (!sessionLoaded) return null;
+  if (!ready) return null;
   if (session && phone.isPending && !phone.isError) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
@@ -78,7 +87,10 @@ function Gate() {
   const hasPhone = !!phone.data;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.bg } }}>
-      <Stack.Protected guard={!hasSession}>
+      <Stack.Protected guard={!hasSession && !seenOnboarding}>
+        <Stack.Screen name="onboarding" />
+      </Stack.Protected>
+      <Stack.Protected guard={!hasSession && seenOnboarding}>
         <Stack.Screen name="login" />
       </Stack.Protected>
       <Stack.Protected guard={hasSession && !hasPhone}>
@@ -88,6 +100,29 @@ function Gate() {
         <Stack.Screen name="index" />
         <Stack.Screen name="destino" />
         <Stack.Screen name="fijar-destino" />
+        <Stack.Screen name="perfil" />
+        <Stack.Screen name="soporte" />
+        <Stack.Screen name="historial/index" />
+        <Stack.Screen name="historial/[id]" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasSession && hasPhone && mode === 'passenger'}>
+        <Stack.Screen name="viaje/tarifa" />
+        <Stack.Screen name="viaje/esperando" />
+        <Stack.Screen name="viaje/en-camino" />
+        <Stack.Screen name="viaje/en-curso" />
+        <Stack.Screen name="viaje/fin" />
+        <Stack.Screen name="viaje/cancelar" />
+      </Stack.Protected>
+      <Stack.Protected guard={hasSession && hasPhone && mode === 'driver'}>
+        <Stack.Screen name="conductor/index" />
+        <Stack.Screen name="conductor/registro" />
+        <Stack.Screen name="conductor/pendiente" />
+        <Stack.Screen name="conductor/solicitud" />
+        <Stack.Screen name="conductor/esperando" />
+        <Stack.Screen name="conductor/recoger" />
+        <Stack.Screen name="conductor/en-curso" />
+        <Stack.Screen name="conductor/cobro" />
+        <Stack.Screen name="conductor/ganancias" />
       </Stack.Protected>
       <Stack.Protected guard={__DEV__}>
         <Stack.Screen name="dev-components" />
