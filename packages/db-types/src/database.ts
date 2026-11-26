@@ -125,14 +125,14 @@ isOneToOne: true
                   ]
                 },"profiles": {
                   Row: {
-                    "avatar_path": string | null,"created_at": string,"deleted_at": string | null,"full_name": string | null,"id": string,"phone": string | null,"push_token": string | null,"rating_avg": number | null,"rating_count": number,"updated_at": string
+                    "avatar_path": string | null,"created_at": string,"deleted_at": string | null,"full_name": string | null,"id": string,"push_token": string | null,"rating_avg": number | null,"rating_count": number,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "avatar_path"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"full_name"?: string | null,"id": string,"phone"?: string | null,"push_token"?: string | null,"rating_avg"?: number | null,"rating_count"?: number,"updated_at"?: string
+                    "avatar_path"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"full_name"?: string | null,"id": string,"push_token"?: string | null,"rating_avg"?: number | null,"rating_count"?: number,"updated_at"?: string
                   }
                   Update: {
-                    "avatar_path"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"full_name"?: string | null,"id"?: string,"phone"?: string | null,"push_token"?: string | null,"rating_avg"?: number | null,"rating_count"?: number,"updated_at"?: string
+                    "avatar_path"?: string | null,"created_at"?: string,"deleted_at"?: string | null,"full_name"?: string | null,"id"?: string,"push_token"?: string | null,"rating_avg"?: number | null,"rating_count"?: number,"updated_at"?: string
                   }
                   Relationships: [
                     
@@ -217,17 +217,23 @@ isOneToOne: false
                   ]
                 },"rides": {
                   Row: {
-                    "assigned_at": string | null,"cancel_reason": string | null,"cancelled_at": string | null,"comment": string | null,"completed_at": string | null,"created_at": string,"destination": unknown,"destination_text": string | null,"driver_arrived_at": string | null,"driver_id": string | null,"expires_at": string,"final_fare_cents": number | null,"id": string,"offered_fare_cents": number,"origin": unknown,"origin_text": string | null,"passenger_count": number,"passenger_id": string,"started_at": string | null,"status": Database["public"]['Enums']["ride_status"]
+                    "accepted_offer_id": string | null,"assigned_at": string | null,"cancel_reason": string | null,"cancelled_at": string | null,"comment": string | null,"completed_at": string | null,"created_at": string,"destination": unknown,"destination_text": string | null,"driver_arrived_at": string | null,"driver_id": string | null,"expires_at": string,"final_fare_cents": number | null,"id": string,"offered_fare_cents": number,"origin": unknown,"origin_text": string | null,"passenger_count": number,"passenger_id": string,"started_at": string | null,"status": Database["public"]['Enums']["ride_status"],"vehicle_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "assigned_at"?: string | null,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"comment"?: string | null,"completed_at"?: string | null,"created_at"?: string,"destination": unknown,"destination_text"?: string | null,"driver_arrived_at"?: string | null,"driver_id"?: string | null,"expires_at": string,"final_fare_cents"?: number | null,"id"?: string,"offered_fare_cents": number,"origin": unknown,"origin_text"?: string | null,"passenger_count"?: number,"passenger_id": string,"started_at"?: string | null,"status"?: Database["public"]['Enums']["ride_status"]
+                    "accepted_offer_id"?: string | null,"assigned_at"?: string | null,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"comment"?: string | null,"completed_at"?: string | null,"created_at"?: string,"destination": unknown,"destination_text"?: string | null,"driver_arrived_at"?: string | null,"driver_id"?: string | null,"expires_at": string,"final_fare_cents"?: number | null,"id"?: string,"offered_fare_cents": number,"origin": unknown,"origin_text"?: string | null,"passenger_count"?: number,"passenger_id": string,"started_at"?: string | null,"status"?: Database["public"]['Enums']["ride_status"],"vehicle_id"?: string | null
                   }
                   Update: {
-                    "assigned_at"?: string | null,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"comment"?: string | null,"completed_at"?: string | null,"created_at"?: string,"destination"?: unknown,"destination_text"?: string | null,"driver_arrived_at"?: string | null,"driver_id"?: string | null,"expires_at"?: string,"final_fare_cents"?: number | null,"id"?: string,"offered_fare_cents"?: number,"origin"?: unknown,"origin_text"?: string | null,"passenger_count"?: number,"passenger_id"?: string,"started_at"?: string | null,"status"?: Database["public"]['Enums']["ride_status"]
+                    "accepted_offer_id"?: string | null,"assigned_at"?: string | null,"cancel_reason"?: string | null,"cancelled_at"?: string | null,"comment"?: string | null,"completed_at"?: string | null,"created_at"?: string,"destination"?: unknown,"destination_text"?: string | null,"driver_arrived_at"?: string | null,"driver_id"?: string | null,"expires_at"?: string,"final_fare_cents"?: number | null,"id"?: string,"offered_fare_cents"?: number,"origin"?: unknown,"origin_text"?: string | null,"passenger_count"?: number,"passenger_id"?: string,"started_at"?: string | null,"status"?: Database["public"]['Enums']["ride_status"],"vehicle_id"?: string | null
                   }
                   Relationships: [
                     {
+      foreignKeyName: "rides_accepted_offer_fk"
+      columns: ["accepted_offer_id"]
+isOneToOne: false
+      referencedRelation: "ride_offers"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "rides_driver_id_fkey"
       columns: ["driver_id"]
 isOneToOne: false
@@ -238,6 +244,12 @@ isOneToOne: false
       columns: ["passenger_id"]
 isOneToOne: false
       referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "rides_vehicle_id_fkey"
+      columns: ["vehicle_id"]
+isOneToOne: false
+      referencedRelation: "vehicles"
       referencedColumns: ["id"]
     }
                   ]

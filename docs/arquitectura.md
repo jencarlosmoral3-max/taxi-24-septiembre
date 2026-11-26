@@ -20,15 +20,22 @@ Estado: aprobada (plan del CTO 2026-11-25) y validada por council `council-20261
 Descartadas: stack QUIVO (NestJS + Redis + websockets propios: más operación para un equipo chico, el CTO eligió app independiente) y Firebase (sin geoespacial nativo, cobro por lectura con GPS).
 
 ## Modelo de datos
-- `profiles` (id = auth.uid, nombre, teléfono, foto, rating_avg, push_token, role)
+- `profiles` (id = auth.uid, nombre, foto, rating_avg, push_token). El teléfono vive solo en `auth.users`; el de la contraparte se entrega por RPC desde `assigned`. Admin = claim del JWT; conductor = tiene fila en `drivers` (sin columna `role`).
 - `drivers` (profile_id, estado `pending|approved|suspended`, nº interno, licencia, CI)
 - `vehicles` (driver_id, placa, marca, modelo, color, año, RUAT, SOAT)
 - `driver_documents` (driver_id, tipo, storage_path, estado)
 - `driver_locations` (**una fila por conductor**: geography Point, heading, `is_online`, `updated_at`) — índice GIST
-- `rides` (pasajero, conductor, origen/destino geography + texto, `offered_fare`, `final_fare` en centavos de Bs, estado, `expires_at`, timestamps por estado, motivo de cancelación)
+- `rides` (pasajero, conductor, `accepted_offer_id`, `vehicle_id`, origen/destino geography + texto, `offered_fare_cents`, `final_fare_cents`, estado, `expires_at`, timestamps por estado, motivo de cancelación). Checks de coherencia estado ↔ conductor/oferta en la DB.
 - `ride_offers` (ride_id, driver_id, precio, estado `active|accepted|rejected|expired`, `expires_at`)
 - `ride_track_points` (solo durante viajes en curso, insert por lotes)
 - `ratings`, `sos_events`, `app_config` (tarifa mínima, radio, tiempos de expiración, fórmula de tarifa sugerida), `config_audit`
+
+### Invariantes en la DB (B-01)
+- Índices únicos parciales: 1 viaje abierto por pasajero (`requested` a `in_progress`), 1 viaje activo por conductor, 1 oferta activa por conductor y pedido, 1 oferta aceptada por pedido.
+- Trigger en `ride_offers`: no se insertan ofertas sobre un pedido que no está `requested` y vigente (`FOR SHARE`, serializa con el `FOR UPDATE` de `accept_offer`).
+- Privilegios: `anon` y `authenticated` sin ningún permiso por defecto en `public` (tablas, secuencias, funciones, también las futuras). Cada grant es explícito, por columna o por función, desde B-02.
+- Borrado: nunca se borra `auth.users`. Eliminar cuenta = anonimizar (teléfono nulo en auth + ban, PII nula en nuestras tablas). FKs con `on delete restrict` para no perder auditoría.
+- `driver_locations`: fillfactor 50 y autovacuum agresivo; GIST parcial `where is_online`. En B-17 se mide contra quitar el índice (updates HOT con seq scan).
 
 ## Máquina de estados de `rides`
 `requested → assigned → driver_arrived → in_progress → completed`

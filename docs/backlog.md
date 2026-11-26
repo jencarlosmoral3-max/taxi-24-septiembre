@@ -104,6 +104,7 @@ CA: migraciones aplican limpio en local y dev · tipos generados con `supabase g
 ### B-02 · RLS en todas las tablas
 labels: backend, seguridad | High | B-01
 Políticas por rol (pasajero, conductor, admin). Teléfono y ubicación del otro lado visibles solo desde `assigned` hasta cerrar el viaje.
+Nota (review B-01): `anon` y `authenticated` arrancan sin privilegios. Cada acceso se concede explícito: `grant select (columnas) ...` y `grant execute on function ...`. RLS filtra filas, no columnas: `drivers.status`, `rating_*`, `ci_number`, `license_number` y `push_token` nunca se exponen ni se escriben directo. Las funciones nuevas no son ejecutables por nadie por defecto (revoke global para `postgres`): helpers de políticas y RPCs necesitan `grant execute ... to authenticated`.
 CA: RLS activado en 100% de tablas · tests pgTAP de acceso cruzado (pasajero A no ve viaje de B).
 
 ### B-03 · Auth por teléfono (OTP SMS)
@@ -119,16 +120,19 @@ CA: test: otro conductor no puede leer documentos ajenos.
 ### B-05 · RPC `create_ride` + búsqueda de conductores cercanos
 labels: backend | High | B-02
 Valida tarifa ≥ mínimo de `app_config`; índice único parcial "1 pedido abierto por pasajero"; inserta con `expires_at`; busca conductores aprobados, en línea y libres con `ST_DWithin` (radio configurable, ubicación de < 60 s); notifica por `realtime.send` al canal privado `driver:{id}` + push FCM de alta prioridad.
+Nota (review B-01): funciones con `search_path = ''` deben calificar PostGIS: `extensions.st_dwithin`, `::extensions.geography`, `OPERATOR(extensions.<->)`. Un test pgTAP debe ejercitar `ST_DWithin` desde la RPC.
 CA: tests pgTAP: tarifa bajo mínimo rechazada · conductor fuera de radio o suspendido no notificado.
 
 ### B-06 · RPC `make_offer` (aceptar precio o contraofertar)
 labels: backend | High | B-05
 Una oferta activa por conductor y viaje; expira según config (~45 s); conductor sin viaje activo; notifica al pasajero.
+Nota (review B-01): reemplazo de oferta con `insert ... on conflict (ride_id, driver_id) where status = 'active' do update`. Orden de locks: siempre ride primero, ofertas después.
 CA: tests: segunda oferta reemplaza la anterior · oferta sobre viaje no `requested` rechazada.
 
 ### B-07 · RPC `accept_offer` atómico
 labels: backend | High | B-06
 Transacción con `SELECT … FOR UPDATE` sobre el ride; valida oferta vigente; asigna conductor; rechaza las demás ofertas; índice único parcial "un viaje activo por conductor" impide doble asignación.
+Nota (review B-01): al asignar, expirar las otras ofertas activas del mismo conductor en otros pedidos y traducir 23505 a un error de negocio. Guardar `accepted_offer_id` y `vehicle_id`. Idempotencia: si el ride ya tiene ese `accepted_offer_id`, devolver éxito.
 CA: test de concurrencia: dos aceptaciones simultáneas → exactamente una gana · conductor nunca queda con 2 viajes activos.
 
 ### B-08 · Transiciones de estado y cancelaciones
