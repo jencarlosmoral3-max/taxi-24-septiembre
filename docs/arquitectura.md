@@ -6,13 +6,13 @@ Estado: aprobada (plan del CTO 2026-11-25) y validada por council `council-20261
 | Capa | Elección |
 |---|---|
 | App móvil (pasajero + conductor) | Expo (SDK actual) + Expo Router + TypeScript · EAS Build/Update |
-| Mapas | `react-native-maps` (Google en Android) + estilo oscuro custom |
+| Mapas | MVP: `@maplibre/maplibre-react-native` + tiles de OpenFreeMap con estilo oscuro (sin tarjeta). Piloto: evaluar Google |
 | Ubicación conductor | `expo-location` + `expo-task-manager` con foreground service (go/no-go en spike F-06; plan B Transistorsoft con licencia propia) |
 | Estado cliente | TanStack Query (servidor) + Zustand (UI/sesión) |
 | Backend | Supabase `sa-east-1`: Postgres + PostGIS, Auth (Google), Realtime Broadcast, Storage, Edge Functions, pg_cron |
 | Login | Google (Supabase Auth, `signInWithIdToken` nativo). Teléfono de contacto declarado por el usuario, sin verificar en el piloto; OTP por WhatsApp/SMS queda para después del piloto |
 | Push | FCM vía Expo Notifications, alta prioridad para pedidos y ofertas |
-| Geocoding / rutas | Google Places Autocomplete + Routes vía Edge Function (key nunca en la app) |
+| Geocoding / rutas | Edge Function proxy. MVP: Photon/Nominatim (búsqueda) + OSRM (distancia/duración), gratis. Piloto: Google Places + Routes (key nunca en la app) |
 | Panel sindicato | Next.js (App Router) en Vercel, mismo Supabase, claim `admin` |
 | Monitoreo | Sentry (app + admin) |
 | Repo | Monorepo pnpm: `apps/mobile`, `apps/admin`, `supabase/` (migrations, functions, tests pgTAP) |

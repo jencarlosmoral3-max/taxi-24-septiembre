@@ -16,6 +16,7 @@ CA: nombre aprobado por escrito · logo en SVG · registrado en `docs/decisiones
 ### F-02 · Aprobar presupuesto de servicios externos
 labels: infra | High | —
 CTO aprueba: Google Maps Platform (Places/Routes con cap), Supabase Pro para piloto, Google Play (US$25), Apple Developer (US$99/año, V2).
+Nota (CTO, 2026-11-26): MVP demo de producción **sin pago**: Supabase Free, mapas OSM (ver `docs/decisiones.md`), cuenta de Google Play ya existente. F-02 queda cerrado en US$0 hasta el piloto real.
 CA: monto mensual estimado por servicio · aprobación en `docs/decisiones.md` · alertas de presupuesto configuradas.
 
 ### F-03 · Repo GitHub + CI + branch protection
@@ -54,7 +55,7 @@ CA: componentes con variantes y auto layout · usan solo variables.
 
 ### D-03 · Estilo de mapa oscuro
 labels: diseño | High | D-01
-JSON de estilo Google Maps alineado a la paleta + marcadores.
+JSON de estilo Google Maps alineado a la paleta + marcadores. (MVP: estilo MapLibre oscuro basado en OpenFreeMap.)
 CA: JSON exportado al repo (`apps/mobile/assets/map-style.json`) · captura de Santa Cruz centro.
 
 ### D-04 · Ilustraciones propias
@@ -164,6 +165,7 @@ CA: push recibido en Android con app en segundo plano.
 ### B-12 · Edge function proxy Places / Routes
 labels: backend | High | F-05
 Proxy de Google Places Autocomplete (session tokens, sesgo a Santa Cruz) y Routes (distancia/duración). Key nunca en la app. Rate limit por usuario.
+Nota (CTO, 2026-11-26): en el MVP el proxy usa proveedores OSM gratuitos: búsqueda con Photon (sesgo a Santa Cruz por lat/lon, filtro por bbox) con Nominatim de respaldo (máx. 1 req/s, User-Agent propio), distancia/duración con OSRM público. Cache de respuestas y rate limit por usuario para respetar el uso justo. La interfaz del proxy no depende del proveedor (cambiar a Google después no toca la app).
 CA: la app no contiene la key server · costo por pedido estimado y documentado.
 
 ### B-13 · Tarifa sugerida
@@ -199,7 +201,7 @@ CA: p95 de `accept_offer` y `upsert_driver_location` medidos · sin dobles asign
 
 ### P-01 · Setup Expo + tema + navegación
 labels: app | Medium | F-03, D-01
-Expo Router, TypeScript estricto, tokens de `docs/arte.md` como tema, fuentes Poppins, TanStack Query, Zustand, cliente Supabase, EAS dev build con Google Maps.
+Expo Router, TypeScript estricto, tokens de `docs/arte.md` como tema, fuentes Poppins, TanStack Query, Zustand, cliente Supabase, EAS dev build con mapa (Nota 2026-11-26: MapLibre + estilo de OpenFreeMap en vez de Google Maps; ver `docs/decisiones.md`).
 Nota (2026-11-26): proyecto remoto `https://mrhwceepvcjcdntvnsgs.supabase.co`, publishable key `sb_publishable_WTocgXs40qoSK6KjAkSPUQ_FIWTI65l` (pública por diseño: va en la app como `EXPO_PUBLIC_SUPABASE_ANON_KEY`; la seguridad la dan RLS y grants). La secret/service_role key nunca va en la app ni en git.
 CA: dev build Android corre en teléfono real · tema aplicado.
 
@@ -217,7 +219,7 @@ CA: funciona con permiso denegado (mensaje + fijar en mapa).
 ### P-04 · Búsqueda de destino
 labels: app | Medium | P-03, B-12
 Autocomplete con debounce y session token, lugares guardados, fijar en mapa.
-CA: una sesión de autocomplete = un cobro de Places (session token verificado).
+CA: una sesión de autocomplete = un cobro de Places (session token verificado). Con OSM (MVP): debounce ≥ 400 ms y mínimo 3 caracteres.
 
 ### P-05 · Ofrecer tarifa y crear pedido
 labels: app | Medium | P-04, B-05, B-13
