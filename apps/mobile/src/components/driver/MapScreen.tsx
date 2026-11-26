@@ -49,7 +49,7 @@ export function MapScreen({ center, zoom, pins = [], route, camera, mapChildren,
         ))}
         {mapChildren}
       </VyroMap>
-      {!!top && <View style={[styles.top, { top: insets.top + theme.spacing.xs }]}>{top}</View>}
+      {!!top && <View pointerEvents="box-none" style={[styles.top, { top: insets.top + theme.spacing.xs }]}>{top}</View>}
       <View style={[styles.panel, { paddingBottom: insets.bottom + theme.spacing.md }]}>{children}</View>
     </View>
   );

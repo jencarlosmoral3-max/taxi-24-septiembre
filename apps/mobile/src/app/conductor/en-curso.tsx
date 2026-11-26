@@ -1,8 +1,8 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Camera, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { AccessibilityInfo, Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Button, Text } from '@/components';
 import { MapScreen } from '@/components/driver/MapScreen';
@@ -13,9 +13,8 @@ import { confirmAction, openNavigation, useBackConfirm, useDriverPhaseGuard } fr
 import { theme } from '@/theme/theme';
 
 const TRIP_MS = 75000; // demo: todo el recorrido dura ~75 s
-const TICK_MS = 1000;
+const TICK_MS = 250; // tick corto: el marcador salta poco y la camara lo sigue lineal en el mismo intervalo
 const STEP_M = (ROUTE_METERS * TICK_MS) / TRIP_MS;
-const SPEED_M_MIN = 500; // ~30 km/h, para estimar los minutos restantes
 const PITCH = 60;
 const ZOOM = 17;
 
@@ -28,7 +27,7 @@ export default function EnCurso() {
   const finish = useDemoDriver((s) => s.finish);
   const [sos, setSos] = useState(false);
   const [done, setDone] = useState(0); // metros recorridos de la ruta demo
-  const [eta] = useState(() => new Date(Date.now() + Math.ceil(ROUTE_METERS / SPEED_M_MIN) * 60000).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }));
+  const [now, setNow] = useState(() => Date.now()); // reloj del tick, para recalcular la llegada sin llamar Date.now en el render
   const reduce = useReduceMotion();
   const { height } = useWindowDimensions();
   const cam = useRef<CameraRef>(null);
@@ -37,22 +36,33 @@ export default function EnCurso() {
   // El taxi avanza solo mientras la pantalla esta enfocada; se limpia al salir o desmontar.
   useFocusEffect(
     useCallback(() => {
-      const id = setInterval(() => setDone((d) => Math.min(d + STEP_M, ROUTE_METERS)), TICK_MS);
+      const id = setInterval(() => {
+        setDone((d) => Math.min(d + STEP_M, ROUTE_METERS));
+        setNow(Date.now());
+      }, TICK_MS);
       return () => clearInterval(id);
     }, []),
   );
-  const { pos, bearing, next } = pointAt(done);
+  const { pos, bearing, next } = useMemo(() => pointAt(done), [done]); // estable por `done`: la camara no se re-anima en renders ajenos
   // El pitch/rumbo se aplican con la ref (easeTo): las props declarativas de Camera no inclinaron el mapa en pruebas.
   useEffect(() => {
     cam.current?.easeTo({ center: pos, zoom: ZOOM, pitch: PITCH, bearing, padding: { bottom: height * 0.3 }, duration: reduce ? 0 : TICK_MS, easing: 'linear' });
   }, [pos, bearing, reduce, height]);
+  const stepIdx = DEMO_MANEUVERS.findIndex((m) => ROUTE_CUM[m.at] > done);
+  const arrived = done >= ROUTE_METERS;
+  const step = DEMO_MANEUVERS[stepIdx < 0 ? DEMO_MANEUVERS.length - 1 : stepIdx];
+  // Se anuncia solo al cambiar la maniobra (la distancia cambia en cada tick y no debe anunciarse).
+  const spoken = arrived ? 'Llegaste al destino' : `${step.text}, ${step.street}`;
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(spoken);
+  }, [spoken]);
   if (!ok || !request) return null;
 
   const { dropoff } = request;
-  const arrived = done >= ROUTE_METERS;
-  const step = DEMO_MANEUVERS.find((m) => ROUTE_CUM[m.at] > done) ?? DEMO_MANEUVERS[DEMO_MANEUVERS.length - 1];
   const leftM = ROUTE_METERS - done;
-  const leftMin = Math.max(1, Math.ceil(leftM / SPEED_M_MIN));
+  const leftMs = (leftM / ROUTE_METERS) * TRIP_MS; // mismo ritmo demo para minutos restantes y hora de llegada
+  const leftMin = Math.max(1, Math.ceil(leftMs / 60000));
+  const eta = new Date(now + leftMs).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
   const askSos = () =>
     Alert.alert('¿Enviar alerta de emergencia?', 'Avisaremos al sindicato.', [
       { text: 'Volver', style: 'cancel' },
@@ -80,7 +90,7 @@ export default function EnCurso() {
         </Marker>
       }
       top={
-        <View style={styles.banner} accessible accessibilityLiveRegion="polite" accessibilityLabel={`${banner}, ${step.street}`}>
+        <View style={styles.banner} accessible accessibilityLabel={`${banner}, ${step.street}`}>
           <MaterialCommunityIcons name={arrived ? 'flag-checkered' : step.icon} size={theme.size.starInput} color={theme.colors.primary} />
           <View style={styles.flex}>
             <Text variant="title18">{banner}</Text>

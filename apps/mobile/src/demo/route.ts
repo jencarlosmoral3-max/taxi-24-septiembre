@@ -2,6 +2,8 @@
 // shortcut: geometria y pasos pegados de una consulta unica a OSRM publico (simplificada); en fase 2 salen de la op `route` del Edge Function geo (hoy solo devuelve distancia y duracion).
 import type { LngLat } from '@maplibre/maplibre-react-native';
 
+import { DEMO_REQUEST } from './data';
+
 
 export const DEMO_ROUTE: LngLat[] = [
   [-63.19690, -17.76530],
@@ -179,6 +181,13 @@ export function meters(a: LngLat, b: LngLat): number {
 // Acumulado en metros hasta cada punto de la ruta.
 export const ROUTE_CUM = DEMO_ROUTE.reduce<number[]>((acc, p, i) => [...acc, i ? acc[i - 1] + meters(DEMO_ROUTE[i - 1], p) : 0], []);
 export const ROUTE_METERS = ROUTE_CUM[ROUTE_CUM.length - 1];
+
+// DEMO_ROUTE debe ir de DEMO_REQUEST.pickup a DEMO_REQUEST.dropoff; si cambia el pedido demo, hay que regenerar la ruta.
+if (__DEV__) {
+  const { pickup, dropoff } = DEMO_REQUEST;
+  console.assert(meters(DEMO_ROUTE[0], [pickup.lng, pickup.lat]) < 100, 'DEMO_ROUTE no empieza en el pickup del pedido demo');
+  console.assert(meters(DEMO_ROUTE[DEMO_ROUTE.length - 1], [dropoff.lng, dropoff.lat]) < 100, 'DEMO_ROUTE no termina en el dropoff del pedido demo');
+}
 
 // Rumbo en grados (0 = norte) de a hacia b.
 function heading(a: LngLat, b: LngLat): number {
