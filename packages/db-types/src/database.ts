@@ -332,6 +332,9 @@ isOneToOne: false
 "expire_stale":
 { Args: Record<PropertyKey, never>; Returns: Json
                            },
+"geo_upstream_slot":
+{ Args: { "p_provider": string }; Returns: boolean
+                           },
 "get_my_driver_application":
 { Args: Record<PropertyKey, never>; Returns: {
               "approved_at": string,"rejected_reason": string,"status": Database["public"]['Enums']["driver_status"],"union_member_number": string

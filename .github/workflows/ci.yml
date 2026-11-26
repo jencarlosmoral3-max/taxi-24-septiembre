@@ -58,3 +58,13 @@ jobs:
           version: 3.4.0
       - run: supabase db start
       - run: supabase test db
+
+  deno-geo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno check supabase/functions/geo/index.ts
+      - run: deno test supabase/functions/geo

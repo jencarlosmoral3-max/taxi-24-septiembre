@@ -1,8 +1,9 @@
-import { handle, type Deps } from "./lib.ts";
+import { clearCache, handle, type Deps } from "./lib.ts";
 
 const eq = (a: unknown, b: unknown) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${JSON.stringify(a)} != ${JSON.stringify(b)}`); };
 
-function mk(routes: Record<string, () => Response>, opts: { user?: string | null; quota?: string } = {}) {
+function mk(routes: Record<string, () => Response>, opts: { user?: string | null; quota?: string; slot?: boolean } = {}) {
+  clearCache();
   const calls: string[] = [];
   const d: Deps = {
     fetch: ((u: string) => {
@@ -14,6 +15,8 @@ function mk(routes: Record<string, () => Response>, opts: { user?: string | null
     rpcFor: () => (fn, args) => Promise.resolve(
       fn === "consume_geo_quota"
         ? { data: null, error: opts.quota ? { message: opts.quota } : null }
+        : fn === "geo_upstream_slot"
+        ? { data: opts.slot ?? true, error: null }
         : { data: Math.ceil(((args!.p_distance_m as number) / 1000) * 3) * 100, error: null },
     ),
   };
@@ -36,18 +39,20 @@ Deno.test("search: normaliza Photon y filtra por bbox", async () => {
   if (!calls[0].includes("lat=-17.7833&lon=-63.1821")) throw new Error("sin sesgo por defecto");
 });
 
-Deno.test("search: Photon falla -> Nominatim", async () => {
-  const { d, calls } = mk({ "nominatim.openstreetmap.org/search": () => J([{ place_id: 9, lat: "-17.79", lon: "-63.19", display_name: "Mercado, Santa Cruz", name: "Mercado" }]) });
-  const r = await handle(post({ op: "search", q: "mercado" }), d);
-  eq((await r.json()).places[0].id, "n9");
-  if (!calls[1].includes("bounded=1") || !calls[1].includes("countrycodes=bo")) throw new Error("params nominatim");
-});
-
-Deno.test("search: ambos fallan -> 502 genérico sin detalle", async () => {
-  const { d } = mk({});
+Deno.test("search: Photon falla -> 502 genérico, sin Nominatim", async () => {
+  const { d, calls } = mk({});
   const r = await handle(post({ op: "search", q: "mercado" }), d);
   eq(r.status, 502);
   eq(await r.json(), { error: "upstream_error" });
+  eq(calls.length, 1);
+  if (calls[0].includes("nominatim") || !calls[0].includes("bbox=-63.4,-18.05,-62.95,-17.55")) throw new Error("bbox/no nominatim");
+});
+
+Deno.test("search: cache evita segunda llamada", async () => {
+  const { d, calls } = mk({ "photon.komoot.io/api": () => photon.clone() });
+  await handle(post({ op: "search", q: "Plaza" }), d);
+  await handle(post({ op: "search", q: " plaza " }), d);
+  eq(calls.length, 1);
 });
 
 Deno.test("validación de entradas", async () => {
@@ -77,6 +82,9 @@ Deno.test("reverse: Photon y fallback", async () => {
   eq(await (await handle(post({ op: "reverse", lat: -17.78, lng: -63.18 }), a.d)).json(), { name: "Plaza 24", address: "Calle Libertad, Santa Cruz" });
   const b = mk({ "nominatim.openstreetmap.org/reverse": () => J({ display_name: "Av. Cañoto, Santa Cruz", name: "" }) });
   eq(await (await handle(post({ op: "reverse", lat: -17.78, lng: -63.18 }), b.d)).json(), { name: "Av. Cañoto", address: "Av. Cañoto, Santa Cruz" });
+  const c = mk({ "nominatim.openstreetmap.org/reverse": () => J({ display_name: "X" }) }, { slot: false });
+  eq((await handle(post({ op: "reverse", lat: -17.78, lng: -63.18 }), c.d)).status, 502); // sin slot no se llama a Nominatim
+  eq(c.calls.some((u) => u.includes("nominatim")), false);
 });
 
 Deno.test("route: OSRM + tarifa del RPC", async () => {
@@ -89,4 +97,13 @@ Deno.test("route: OSRM + tarifa del RPC", async () => {
 Deno.test("route: OSRM sin ruta -> 502", async () => {
   const { d } = mk({ "router.project-osrm.org": () => J({ code: "NoRoute" }) });
   eq((await handle(post({ op: "route", from: { lat: -17.78, lng: -63.18 }, to: { lat: -17.8, lng: -63.2 } }), d)).status, 502);
+});
+
+Deno.test("route: sin slot OSRM -> 503 busy; cuerpo > 2048 -> 400", async () => {
+  const { d, calls } = mk({}, { slot: false });
+  const r = await handle(post({ op: "route", from: { lat: -17.78, lng: -63.18 }, to: { lat: -17.8, lng: -63.2 } }), d);
+  eq(r.status, 503);
+  eq(await r.json(), { error: "busy" });
+  eq(calls.length, 0);
+  eq((await handle(post({ op: "search", q: "a".repeat(3000) }), mk({}).d)).status, 400);
 });

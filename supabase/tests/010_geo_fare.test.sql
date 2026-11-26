@@ -1,5 +1,5 @@
 begin;
-select plan(16);
+select plan(25);
 
 insert into auth.users (id, instance_id, aud, role, phone)
 values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000001'),
@@ -30,6 +30,16 @@ select throws_ok($$select public.suggest_fare(1000, -1)$$, 'P0001', 'invalid_rou
 select throws_ok($$select public.suggest_fare(200001, 60)$$, 'P0001', 'invalid_route', 'distancia > 200 km');
 select throws_ok($$select public.suggest_fare(1000, 21601)$$, 'P0001', 'invalid_route', 'duración > 6 h');
 
+-- Aritmética exacta: base 500 + 300/km*0.56 (168) + 30/min*64s (32) = 700
+reset role;
+update public.app_config set per_min_cents = 30, min_fare_cents = 100;
+select pg_temp.login('00000000-0000-0000-0000-0000000000a1');
+select is(public.suggest_fare(560, 64), 700, 'entero exacto sin flotantes');
+select is(public.suggest_fare(561, 64), 800, '700.3 sube a Bs entero');
+reset role;
+update public.app_config set per_min_cents = 50, min_fare_cents = 1000;
+select pg_temp.login('00000000-0000-0000-0000-0000000000a1');
+
 -- Cuota: 60 permitidas, la 61 falla; otro usuario no se ve afectado.
 select lives_ok($$select public.consume_geo_quota() from generate_series(1, 60)$$, '60 llamadas permitidas');
 select throws_ok($$select public.consume_geo_quota()$$, 'P0001', 'rate_limited', 'la 61 se rechaza');
@@ -37,8 +47,21 @@ reset role;
 select pg_temp.login('00000000-0000-0000-0000-0000000000b1');
 select lives_ok($$select public.consume_geo_quota()$$, 'cuota independiente por usuario');
 
+-- Compuerta de upstream: primera pasa, la segunda inmediata no; proveedores independientes; proveedor inválido.
+select is(public.geo_upstream_slot('nominatim'), true, 'primer slot concedido');
+select is(public.geo_upstream_slot('nominatim'), false, 'segundo slot inmediato denegado');
+select is(public.geo_upstream_slot('osrm'), true, 'otro proveedor independiente');
+select throws_ok($$select public.geo_upstream_slot('evil')$$, 'P0001', 'invalid_provider', 'proveedor fuera de lista');
+select pg_sleep(1.1);
+select is(public.geo_upstream_slot('nominatim'), true, 'tras 1 s vuelve a haber slot');
+
+reset role;
+delete from public.app_config;
+select pg_temp.login('00000000-0000-0000-0000-0000000000a1');
+select throws_ok($$select public.suggest_fare(1000, 60)$$, 'P0001', 'config_missing', 'sin fila de config');
 reset role;
 set local role anon;
+select throws_ok($$select public.geo_upstream_slot('osrm')$$, '42501', null, 'anon no puede geo_upstream_slot');
 select throws_ok($$select public.suggest_fare(1000, 60)$$, '42501', null, 'anon no puede suggest_fare');
 select throws_ok($$select public.consume_geo_quota()$$, '42501', null, 'anon no puede consume_geo_quota');
 
