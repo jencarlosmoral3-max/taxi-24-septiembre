@@ -1,4 +1,4 @@
-import { Camera, Marker, type LngLat } from '@maplibre/maplibre-react-native';
+import { Camera, GeoJSONSource, Layer, Marker, type LngLat } from '@maplibre/maplibre-react-native';
 import type { ReactNode } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,16 +8,35 @@ import { theme } from '@/theme/theme';
 
 export type Pin = { lngLat: LngLat; kind: 'pickup' | 'dropoff'; label: string };
 
-type Props = { center: LngLat; zoom: number; pins?: Pin[]; top?: ReactNode; children: ReactNode };
+type Props = {
+  center: LngLat;
+  zoom: number;
+  pins?: Pin[];
+  route?: LngLat[]; // linea de ruta resaltada
+  camera?: ReactNode; // reemplaza la camara estatica (modo navegacion)
+  mapChildren?: ReactNode; // marcadores extra dentro del mapa
+  top?: ReactNode;
+  children: ReactNode;
+};
 
 // Mapa a pantalla completa con un panel inferior; patron comun del home, recoger y en curso.
-export function MapScreen({ center, zoom, pins = [], top, children }: Props) {
+export function MapScreen({ center, zoom, pins = [], route, camera, mapChildren, top, children }: Props) {
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
   return (
     <View style={styles.root}>
       <VyroMap style={styles.map}>
-        <Camera initialViewState={{ center, zoom, padding: { bottom: height * 0.4 } }} />
+        {camera ?? <Camera initialViewState={{ center, zoom, padding: { bottom: height * 0.4 } }} />}
+        {route && (
+          <GeoJSONSource id="ruta" data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: route } }}>
+            <Layer
+              id="ruta-linea"
+              type="line"
+              layout={{ 'line-cap': 'round', 'line-join': 'round' }}
+              paint={{ 'line-color': theme.colors.primary, 'line-width': theme.spacing['2xs'] * 1.5 }}
+            />
+          </GeoJSONSource>
+        )}
         {pins.map((p) => (
           <Marker key={p.kind} lngLat={p.lngLat}>
             <View
@@ -28,8 +47,9 @@ export function MapScreen({ center, zoom, pins = [], top, children }: Props) {
             />
           </Marker>
         ))}
+        {mapChildren}
       </VyroMap>
-      {!!top && <View style={[styles.top, { top: insets.top + theme.spacing.xs }]}>{top}</View>}
+      {!!top && <View pointerEvents="box-none" style={[styles.top, { top: insets.top + theme.spacing.xs }]}>{top}</View>}
       <View style={[styles.panel, { paddingBottom: insets.bottom + theme.spacing.md }]}>{children}</View>
     </View>
   );
@@ -45,7 +65,7 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     borderColor: theme.colors.text,
   },
-  top: { position: 'absolute', right: theme.size.screenPadding },
+  top: { position: 'absolute', left: theme.size.screenPadding, right: theme.size.screenPadding, alignItems: 'flex-end' },
   panel: {
     position: 'absolute',
     left: 0,

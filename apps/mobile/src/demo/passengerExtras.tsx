@@ -109,14 +109,14 @@ export function initials(name: string) {
 
 const lngLat = (p: { lat: number; lng: number }): LngLat => [p.lng, p.lat];
 
-type MapProps = { origin: Place; destination?: Place; driver?: { lat: number; lng: number }; route?: boolean };
+type MapProps = { origin: Place; destination?: Place; driver?: { lat: number; lng: number }; route?: boolean | LngLat[]; panel?: number };
 
 // Mapa de fondo de las pantallas del viaje: marcadores propio / conductor / destino y ruta recta opcional.
-export function RideMap({ origin, destination, driver, route }: MapProps) {
+export function RideMap({ origin, destination, driver, route, panel = 0.5 }: MapProps) {
   const { height } = useWindowDimensions();
-  const road = useRoute(route ? origin : null, route ? destination : null).data; // recta mientras carga o si falla
+  const road = useRoute(route === true ? origin : null, route === true ? destination : null).data; // recta mientras carga o si falla; un array ya trae su geometria
   const pts = [origin, destination, driver].filter((p): p is { lat: number; lng: number } => !!p);
-  const bottom = height * 0.5; // el panel inferior tapa ~la mitad
+  const bottom = height * panel; // el panel inferior tapa ~la mitad
   const bounds = pts.length > 1
     ? ([Math.min(...pts.map((p) => p.lng)), Math.min(...pts.map((p) => p.lat)), Math.max(...pts.map((p) => p.lng)), Math.max(...pts.map((p) => p.lat))] as [number, number, number, number])
     : null;
@@ -126,14 +126,14 @@ export function RideMap({ origin, destination, driver, route }: MapProps) {
       <Camera
         initialViewState={
           bounds
-            ? { bounds, padding: { top: pad * 2, left: pad, right: pad, bottom } }
+            ? { bounds, padding: { top: panel ? pad * 2 : pad, left: pad, right: pad, bottom } }
             : { center: lngLat(origin), zoom: 15, padding: { top: 0, left: 0, right: 0, bottom } }
         }
       />
       {route && destination && (
         <GeoJSONSource
           id="ruta"
-          data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: road ?? [lngLat(origin), lngLat(destination)] } }}
+          data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: Array.isArray(route) ? route : (road ?? [lngLat(origin), lngLat(destination)]) } }}
         >
           <Layer id="ruta-linea" type="line" paint={{ 'line-color': theme.colors.primary, 'line-width': theme.spacing['2xs'] }} />
         </GeoJSONSource>
