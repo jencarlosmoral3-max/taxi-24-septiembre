@@ -2,21 +2,23 @@ import { clearCache, handle, type Deps } from "./lib.ts";
 
 const eq = (a: unknown, b: unknown) => { if (JSON.stringify(a) !== JSON.stringify(b)) throw new Error(`${JSON.stringify(a)} != ${JSON.stringify(b)}`); };
 
-function mk(routes: Record<string, () => Response>, opts: { user?: string | null; quota?: string; slot?: boolean } = {}) {
+const KEY = "SECRETKEY123";
+function mk(routes: Record<string, () => Response>, opts: { user?: string | null; quota?: string; key?: string; throwFetch?: boolean } = {}) {
   clearCache();
   const calls: string[] = [];
   const d: Deps = {
     fetch: ((u: string) => {
       calls.push(String(u));
+      // Como Deno: el mensaje del error de red incluye la URL (y por tanto la apiKey).
+      if (opts.throwFetch) return Promise.reject(new TypeError(`error sending request for url (${u})`));
       const k = Object.keys(routes).find((p) => String(u).includes(p));
       return Promise.resolve(k ? routes[k]() : new Response("x", { status: 500 }));
     }) as typeof fetch,
+    geoapifyKey: opts.key ?? KEY,
     getUserId: () => Promise.resolve(opts.user === undefined ? "u1" : opts.user),
     rpcFor: () => (fn, args) => Promise.resolve(
       fn === "consume_geo_quota"
         ? { data: null, error: opts.quota ? { message: opts.quota } : null }
-        : fn === "geo_upstream_slot"
-        ? { data: opts.slot ?? true, error: null }
         : { data: Math.ceil(((args!.p_distance_m as number) / 1000) * 3) * 100, error: null },
     ),
   };
@@ -26,30 +28,43 @@ const post = (body: unknown, auth = "Bearer t") =>
   new Request("http://x/geo", { method: "POST", headers: { Authorization: auth }, body: JSON.stringify(body) });
 const J = (o: unknown) => new Response(JSON.stringify(o));
 
-const photon = J({ features: [
-  { geometry: { coordinates: [-63.18, -17.78] }, properties: { osm_type: "N", osm_id: 1, name: "Plaza 24", street: "Calle Libertad", city: "Santa Cruz" } },
-  { geometry: { coordinates: [-68.1, -16.5] }, properties: { osm_type: "N", osm_id: 2, name: "La Paz" } }, // fuera del bbox
-] });
 
-Deno.test("search: normaliza Photon y filtra por bbox", async () => {
-  const { d, calls } = mk({ "photon.komoot.io/api": () => photon.clone() });
+const ac = J({ results: [
+  { place_id: "p1", name: "Plaza 24", street: "Calle Libertad", suburb: "Centro", city: "Santa Cruz de la Sierra", formatted: "Plaza 24, Santa Cruz", lat: -17.78, lon: -63.18 },
+  { place_id: "p2", name: "La Paz", lat: -16.5, lon: -68.1 }, // fuera del bbox
+] });
+const A = "geocode/autocomplete", R = "geocode/reverse", O = "v1/routing";
+const FROM = { lat: -17.78, lng: -63.18 }, TO = { lat: -17.8, lng: -63.2 };
+
+Deno.test("search: mapea Geoapify y filtra por bbox", async () => {
+  const { d, calls } = mk({ [A]: () => ac.clone() });
   const r = await handle(post({ op: "search", q: "plaza" }), d);
   eq(r.status, 200);
-  eq((await r.json()).places, [{ id: "N1", name: "Plaza 24", address: "Calle Libertad, Santa Cruz", lat: -17.78, lng: -63.18 }]);
-  if (!calls[0].includes("lat=-17.7833&lon=-63.1821")) throw new Error("sin sesgo por defecto");
+  eq((await r.json()).places, [{ id: "p1", name: "Plaza 24", address: "Calle Libertad, Centro, Santa Cruz de la Sierra", lat: -17.78, lng: -63.18 }]);
+  for (const p of ["bias=proximity:-63.1821,-17.7833", "filter=rect:-63.4,-18.05,-62.95,-17.55", "lang=es", "format=json", `apiKey=${KEY}`]) {
+    if (!calls[0].includes(p)) throw new Error(`falta ${p}`);
+  }
 });
 
-Deno.test("search: Photon falla -> 502 genérico, sin Nominatim", async () => {
+Deno.test("search: nombre cae a calle+número o a formatted", async () => {
+  const { d } = mk({ [A]: () => J({ results: [
+    { place_id: "a", street: "Av. Cañoto", housenumber: "12", city: "Santa Cruz", lat: -17.78, lon: -63.18 },
+    { place_id: "b", formatted: "Mercado Los Pozos, Santa Cruz", lat: -17.77, lon: -63.17 },
+  ] }) });
+  const p = (await (await handle(post({ op: "search", q: "x y z" }), d)).json()).places;
+  eq(p.map((x: { name: string }) => x.name), ["Av. Cañoto 12", "Mercado Los Pozos"]);
+});
+
+Deno.test("search: upstream no OK -> 502 genérico", async () => {
   const { d, calls } = mk({});
   const r = await handle(post({ op: "search", q: "mercado" }), d);
   eq(r.status, 502);
   eq(await r.json(), { error: "upstream_error" });
   eq(calls.length, 1);
-  if (calls[0].includes("nominatim") || !calls[0].includes("bbox=-63.4,-18.05,-62.95,-17.55")) throw new Error("bbox/no nominatim");
 });
 
 Deno.test("search: cache evita segunda llamada", async () => {
-  const { d, calls } = mk({ "photon.komoot.io/api": () => photon.clone() });
+  const { d, calls } = mk({ [A]: () => ac.clone() });
   await handle(post({ op: "search", q: "Plaza" }), d);
   await handle(post({ op: "search", q: " plaza " }), d);
   eq(calls.length, 1);
@@ -77,33 +92,50 @@ Deno.test("cuota agotada -> 429 antes de llamar al upstream", async () => {
   eq(calls.length, 0);
 });
 
-Deno.test("reverse: Photon y fallback", async () => {
-  const a = mk({ "photon.komoot.io/reverse": () => photon.clone() });
+Deno.test("reverse: mapea Geoapify; sin resultados o upstream caído -> 502", async () => {
+  const a = mk({ [R]: () => J({ results: [{ place_id: "p1", name: "Plaza 24", street: "Calle Libertad", city: "Santa Cruz", lat: -17.78, lon: -63.18 }] }) });
   eq(await (await handle(post({ op: "reverse", lat: -17.78, lng: -63.18 }), a.d)).json(), { name: "Plaza 24", address: "Calle Libertad, Santa Cruz" });
-  const b = mk({ "nominatim.openstreetmap.org/reverse": () => J({ display_name: "Av. Cañoto, Santa Cruz", name: "" }) });
-  eq(await (await handle(post({ op: "reverse", lat: -17.78, lng: -63.18 }), b.d)).json(), { name: "Av. Cañoto", address: "Av. Cañoto, Santa Cruz" });
-  const c = mk({ "nominatim.openstreetmap.org/reverse": () => J({ display_name: "X" }) }, { slot: false });
-  eq((await handle(post({ op: "reverse", lat: -17.78, lng: -63.18 }), c.d)).status, 502); // sin slot no se llama a Nominatim
-  eq(c.calls.some((u) => u.includes("nominatim")), false);
+  if (!a.calls[0].includes("lat=-17.78&lon=-63.18")) throw new Error("lat/lon");
+  eq((await handle(post({ op: "reverse", lat: -17.78, lng: -63.18 }), mk({ [R]: () => J({ results: [] }) }).d)).status, 502);
+  eq((await handle(post({ op: "reverse", lat: -17.78, lng: -63.18 }), mk({}).d)).status, 502);
 });
 
-Deno.test("route: OSRM + tarifa del RPC", async () => {
-  const { d, calls } = mk({ "router.project-osrm.org": () => J({ code: "Ok", routes: [{ distance: 5040.4, duration: 601.2 }] }) });
-  const r = await handle(post({ op: "route", from: { lat: -17.78, lng: -63.18 }, to: { lat: -17.8, lng: -63.2 } }), d);
+Deno.test("route: Geoapify + tarifa del RPC", async () => {
+  const { d, calls } = mk({ [O]: () => J({ results: [{ distance: 5040.4, time: 601.2 }] }) });
+  const r = await handle(post({ op: "route", from: FROM, to: TO }), d);
   eq(await r.json(), { distance_m: 5040, duration_s: 601, suggested_fare_cents: 1600 });
-  if (!calls[0].includes("-63.18,-17.78;-63.2,-17.8")) throw new Error("orden lng,lat");
+  if (!calls[0].includes("waypoints=-17.78,-63.18|-17.8,-63.2") || !calls[0].includes("mode=drive")) throw new Error("orden lat,lng");
 });
 
-Deno.test("route: OSRM sin ruta -> 502", async () => {
-  const { d } = mk({ "router.project-osrm.org": () => J({ code: "NoRoute" }) });
-  eq((await handle(post({ op: "route", from: { lat: -17.78, lng: -63.18 }, to: { lat: -17.8, lng: -63.2 } }), d)).status, 502);
+Deno.test("route: sin ruta o upstream caído -> 502", async () => {
+  eq((await handle(post({ op: "route", from: FROM, to: TO }), mk({ [O]: () => J({ results: [] }) }).d)).status, 502);
+  eq((await handle(post({ op: "route", from: FROM, to: TO }), mk({}).d)).status, 502);
 });
 
-Deno.test("route: sin slot OSRM -> 503 busy; cuerpo > 2048 -> 400", async () => {
-  const { d, calls } = mk({}, { slot: false });
-  const r = await handle(post({ op: "route", from: { lat: -17.78, lng: -63.18 }, to: { lat: -17.8, lng: -63.2 } }), d);
-  eq(r.status, 503);
-  eq(await r.json(), { error: "busy" });
+Deno.test("sin GEOAPIFY_API_KEY -> 500 internal_error sin llamar al upstream", async () => {
+  const { d, calls } = mk({ [A]: () => ac.clone() }, { key: "" });
+  const r = await handle(post({ op: "search", q: "plaza" }), d);
+  eq(r.status, 500);
+  eq(await r.json(), { error: "internal_error" });
   eq(calls.length, 0);
+});
+
+Deno.test("la apiKey nunca aparece en logs ni en la respuesta", async () => {
+  const logs: string[] = [];
+  const orig = console.error;
+  console.error = (...a: unknown[]) => { logs.push(a.map(String).join(" ")); };
+  try {
+    const bodies: string[] = [];
+    for (const [routes, opts] of [[{}, {}], [{}, { throwFetch: true }]] as const) {
+      for (const b of [{ op: "search", q: "mercado" }, { op: "reverse", lat: -17.78, lng: -63.18 }, { op: "route", from: FROM, to: TO }]) {
+        bodies.push(await (await handle(post(b), mk(routes, opts).d)).text());
+      }
+    }
+    if (logs.length < 6) throw new Error("se esperaban logs de upstream");
+    if ([...logs, ...bodies].some((t) => t.includes(KEY))) throw new Error("apiKey filtrada");
+  } finally { console.error = orig; }
+});
+
+Deno.test("cuerpo > 2048 -> 400", async () => {
   eq((await handle(post({ op: "search", q: "a".repeat(3000) }), mk({}).d)).status, 400);
 });

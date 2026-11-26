@@ -12,7 +12,7 @@ Estado: aprobada (plan del CTO 2026-11-25) y validada por council `council-20261
 | Backend | Supabase `sa-east-1`: Postgres + PostGIS, Auth (Google), Realtime Broadcast, Storage, Edge Functions, pg_cron |
 | Login | Google (Supabase Auth, `signInWithIdToken` nativo). Teléfono de contacto declarado por el usuario, sin verificar en el piloto; OTP por WhatsApp/SMS queda para después del piloto |
 | Push | FCM vía Expo Notifications, alta prioridad para pedidos y ofertas |
-| Geocoding / rutas | Edge Function proxy. MVP: Photon/Nominatim (búsqueda) + OSRM (distancia/duración), gratis. Piloto: Google Places + Routes (key nunca en la app) |
+| Geocoding / rutas | Edge Function proxy. MVP: Geoapify (búsqueda, reverse, distancia/duración), plan gratis; Photon/Nominatim públicos bloquean las IPs de Supabase Edge (403, logs 2026-11-26), el CTO eligió Geoapify. Piloto: Google Places + Routes (key nunca en la app) |
 | Panel sindicato | Next.js (App Router) en Vercel, mismo Supabase, claim `admin` |
 | Monitoreo | Sentry (app + admin) |
 | Repo | Monorepo pnpm: `apps/mobile`, `apps/admin`, `supabase/` (migrations, functions, tests pgTAP) |
