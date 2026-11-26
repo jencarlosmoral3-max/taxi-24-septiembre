@@ -9,6 +9,7 @@ create table private.geo_usage_day (
   user_id uuid not null references auth.users (id) on delete cascade,
   day date not null,
   hits integer not null default 0,
+  upstream integer not null default 0, -- créditos globales ya tomados; nunca más que hits
   primary key (user_id, day)
 );
 alter table private.geo_usage_day enable row level security;
@@ -60,6 +61,12 @@ declare
 begin
   if auth.uid() is null then
     raise exception 'not_allowed' using errcode = '42501';
+  end if;
+  -- Tope por usuario: no más créditos globales que llamadas de cuota cobradas hoy, así el RPC directo no agota el global.
+  update private.geo_usage_day set upstream = upstream + 1
+  where user_id = auth.uid() and day = (now() at time zone 'utc')::date and upstream < hits;
+  if not found then
+    raise exception 'rate_limited' using errcode = 'P0001';
   end if;
   insert into private.geo_usage_global as g (day, hits) values ((now() at time zone 'utc')::date, 1)
   on conflict (day) do update set hits = g.hits + 1

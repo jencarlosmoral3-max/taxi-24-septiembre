@@ -1,5 +1,5 @@
 begin;
-select plan(26);
+select plan(31);
 
 insert into auth.users (id, instance_id, aud, role, phone)
 values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000001'),
@@ -57,8 +57,17 @@ select pg_temp.login('00000000-0000-0000-0000-0000000000b1');
 select lives_ok($$select public.consume_geo_quota()$$, 'la llamada diaria 100 pasa');
 select throws_ok($$select public.consume_geo_quota()$$, 'P0001', 'rate_limited', 'la diaria 101 se rechaza');
 
--- Tope global (2700): con el contador en 2699 pasa una y la siguiente (otro usuario) falla.
+-- Crédito global acotado por la cuota cobrada del usuario (c1 aún no tiene cuota hoy).
 reset role;
+select pg_temp.login('00000000-0000-0000-0000-0000000000c1');
+select throws_ok($$select public.consume_geo_upstream_credit()$$, 'P0001', 'rate_limited', 'crédito sin cuota cobrada se rechaza');
+select lives_ok($$select public.consume_geo_quota() from generate_series(1, 2)$$, '2 llamadas de cuota para c1');
+select lives_ok($$select public.consume_geo_upstream_credit() from generate_series(1, 2)$$, '2 créditos con 2 cuotas pasan');
+select throws_ok($$select public.consume_geo_upstream_credit()$$, 'P0001', 'rate_limited', 'el crédito N+1 se rechaza');
+
+-- Tope global (2700): con el contador en 2699 pasa una y la siguiente falla (y revierte el contador por usuario).
+reset role;
+update private.geo_usage_day set hits = 10 where user_id = '00000000-0000-0000-0000-0000000000c1';
 insert into private.geo_usage_global (day, hits) values ((now() at time zone 'utc')::date, 2699)
 on conflict (day) do update set hits = 2699;
 select pg_temp.login('00000000-0000-0000-0000-0000000000c1');
@@ -66,6 +75,7 @@ select lives_ok($$select public.consume_geo_upstream_credit()$$, 'la global 2700
 select throws_ok($$select public.consume_geo_upstream_credit()$$, 'P0001', 'rate_limited', 'la global 2701 se rechaza');
 reset role;
 select is((select hits from private.geo_usage_global where day = (now() at time zone 'utc')::date), 2700, 'el rechazo no cuenta');
+select is((select upstream from private.geo_usage_day where user_id = '00000000-0000-0000-0000-0000000000c1'), 3, 'el rechazo global revierte el contador por usuario');
 select pg_temp.login('00000000-0000-0000-0000-0000000000c1');
 
 select hasnt_function('public', 'geo_upstream_slot', array['text'], 'compuerta upstream eliminada');
