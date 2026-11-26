@@ -26,7 +26,8 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 - **Pantallas fase 1** ([`plan-pantallas.md`](plan-pantallas.md)), todas mergeadas con datos de ejemplo: base (#21), pasajero (#22), conductor (#23), comunes (#24), admin (#25), extras: registro, permiso de ubicación y lugares guardados (#26), trazado por calles en `geo` (#27), ruta en la solicitud y modo navegación del conductor (#28, ruta demo real de OSRM fija en `src/demo/route.ts`), entrada de prueba sin cuenta (este PR). Solo V2 queda sin pantalla (chat, programar, compartir viaje).
 - **Panel admin demo:** GitHub Pages https://jencarlosmoral3-max.github.io/taxi-24-septiembre/ (workflow `admin-pages.yml`, deploy en push a `main`; aviso de demo, `noindex`, datos ficticios). El repo es **público** desde 2026-11-26 (decisión del CTO para Pages): nunca commitear nada sensible. Fase 2: el panel real necesita host con servidor (export estático no sirve para auth).
 - **Entrada de prueba:** botón "Probar sin cuenta (demo)" con auth anónima de Supabase, visible con `EXPO_PUBLIC_DEMO_LOGIN=1` (`apps/mobile/.env`); la cuenta de prueba no pide teléfono. Quitar o restringir antes del piloto real; en fase 2 las RPC de viajes deben rechazar `is_anonymous`.
-- **APK demo:** release firmado con `debug.keystore` (SHA-1 ya registrado en el cliente Android de Google), `./gradlew assembleRelease` en `apps/mobile/android`.
+- **APK demo (2026-11-26):** `~/Documents/taxi-24-septiembre-apk/vyro-demo-2026-11-26.apk` (68 MB, `main` 2a0fb4d, ABIs armeabi-v7a + arm64-v8a, firmado con `debug.keystore`, SHA-1 `5E:8F:16…` registrado en Google). Build: `CI=1 npx expo prebuild -p android --no-install` y `./gradlew assembleRelease --max-workers=4 -PreactNativeArchitectures=armeabi-v7a,arm64-v8a` en `apps/mobile/android` con el emulador apagado y sin daemons de Gradle viejos (la RAM llena lo frena).
+- **Remoto al 2026-11-26:** `geo` v6 desplegada por el CTO (trazado por calles, verificado en el emulador: la línea del viaje del pasajero sigue las calles). Migración `anon_demo_guard` aplicada con OK del CTO (12 RPC con guarda, topes de geo para anónimos, 18 políticas restrictivas; verificado por SQL).
 
 ## Decisiones
 Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en código), login con Google en vez de OTP, teléfono de contacto sin verificar, origen exacto para conductores, calificaciones anónimas para el calificado, Android mínimo 7.0.
@@ -35,7 +36,7 @@ Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en códi
 - Rotar el secret de Google OAuth y la API key de Geoapify (pegada en el chat el 2026-11-26) al finalizar el producto (decisión del CTO).
 - Samsung J7 (Android desconocido, se asume ≥ 7.0) cuando el MVP demo esté listo, con la prueba de 2 h del GPS (go/no-go F-06).
 - Activar "Allow anonymous sign-ins" en Supabase (Auth → Sign In / Providers) para el botón de prueba; sin eso muestra "La entrada de prueba no está habilitada".
-- Desplegar `geo` v6 (trazado por calles, PR #27): el clasificador de permisos bloqueó el deploy del agente; `supabase functions deploy geo --project-ref mrhwceepvcjcdntvnsgs` o aprobarlo en el chat. Sin v6 la línea del pasajero es recta.
+- Deploys de Edge Functions: el clasificador de auto mode los bloquea al agente; el CTO los corre en su terminal (`npx supabase login` + `npx supabase functions deploy <fn> --project-ref mrhwceepvcjcdntvnsgs`; `login` no funciona con `!`).
 - Google: la pantalla de consentimiento sigue en modo Prueba (solo correos cargados); publicarla si testers con otros Gmail usan Google.
 - Borrar el repo viejo: `gh auth refresh -h github.com -s delete_repo`.
 - Sin costos en el MVP: Supabase Free, mapas OSM, cuenta de Google Play ya existente.
@@ -50,7 +51,7 @@ Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en códi
 - Branch protection: no disponible en plan Free con repo privado (403).
 - Codex: no se corrió en esta sesión (revisiones con Opus + /security-review).
 - P-01: tras la review de UI no se vio en pantalla el contador de `RequestCard`, la selección de contraoferta, el `BottomSheet`, el teclado ni la fuente agrandada; verificar en emulador al empezar P-02. Bordes de inputs con contraste < 3:1 (token aprobado, pendiente de decisión).
-- Fase 1 de pantallas: Codex no verificado (sin cuota). Forma real de `geometry` en la respuesta de Geoapify (se verifica tras desplegar `geo` v6). Onboarding no recorrido en emulador; TalkBack y suavidad de la navegación tras los fixes de revisión sin probar en dispositivo; botón de prueba sin probar hasta activar la auth anónima.
+- Fase 1 de pantallas: Codex no verificado (sin cuota). Onboarding no recorrido en emulador; TalkBack y suavidad de la navegación tras los fixes de revisión sin probar en dispositivo; botón de prueba sin probar hasta activar la auth anónima; APK release sin probar en teléfono (solo flujos en el emulador con el dev client).
 - Mobile `typecheck` usa `typedRoutes`: los tipos de rutas no se generan en CI; hoy pasa en clon limpio.
 
 ## Registro de planes cerrados
