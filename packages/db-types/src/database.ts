@@ -311,15 +311,42 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "get_my_driver_application":
+            "accept_offer":
+{ Args: { "p_offer_id": string }; Returns: string
+                           },
+"cancel_ride":
+{ Args: { "p_reason"?: string,"p_ride_id": string }; Returns: undefined
+                           },
+"complete_ride":
+{ Args: { "p_ride_id": string }; Returns: undefined
+                           },
+"create_ride":
+{ Args: { "p_comment"?: string,"p_dest_lat": number,"p_dest_lng": number,"p_dest_text": string,"p_offered_fare_cents": number,"p_origin_lat": number,"p_origin_lng": number,"p_origin_text": string,"p_passenger_count"?: number }; Returns: string
+                           },
+"driver_arrived":
+{ Args: { "p_ride_id": string }; Returns: undefined
+                           },
+"expire_stale":
+{ Args: Record<PropertyKey, never>; Returns: Json
+                           },
+"get_my_driver_application":
 { Args: Record<PropertyKey, never>; Returns: {
               "approved_at": string,"rejected_reason": string,"status": Database["public"]['Enums']["driver_status"],"union_member_number": string
             }[]
+                           },
+"get_nearby_requests":
+{ Args: Record<PropertyKey, never>; Returns: Json[]
                            },
 "get_ride_contact":
 { Args: { "p_ride_id": string }; Returns: {
               "full_name": string,"phone": string
             }[]
+                           },
+"make_offer":
+{ Args: { "p_price_cents": number,"p_ride_id": string }; Returns: string
+                           },
+"start_ride":
+{ Args: { "p_ride_id": string }; Returns: undefined
                            }
           }
           Enums: {
