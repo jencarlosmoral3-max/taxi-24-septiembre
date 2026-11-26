@@ -19,7 +19,8 @@ insert into public.profiles (id, full_name) values
   ('00000000-0000-0000-0000-0000000000d3', 'Conductor D3'),
   ('00000000-0000-0000-0000-0000000000d4', 'Conductor D4'),
   ('00000000-0000-0000-0000-0000000000f1', 'Admin'),
-  ('00000000-0000-0000-0000-0000000000f2', 'Sin rol');
+  ('00000000-0000-0000-0000-0000000000f2', 'Sin rol')
+  on conflict (id) do update set full_name = excluded.full_name;
 insert into public.drivers (profile_id, status, ci_number) values
   ('00000000-0000-0000-0000-0000000000d1', 'approved', 'CI-1'),
   ('00000000-0000-0000-0000-0000000000d2', 'approved', 'CI-2'),

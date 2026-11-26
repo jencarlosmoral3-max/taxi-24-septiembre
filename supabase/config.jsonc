@@ -230,7 +230,7 @@
       // Number of emails that can be sent per hour. Requires auth.email.smtp to be enabled.
       "email_sent": 2,
       // Number of SMS messages that can be sent per hour. Requires auth.sms to be enabled.
-      "sms_sent": 30,
+      "sms_sent": 30, // local; en produccion bajar (los OTP cuestan)
       // Number of anonymous sign-ins that can be made per hour per IP address. Requires enable_anonymous_sign_ins = true.
       "anonymous_users": 30,
       // Number of sessions that can be refreshed in a 5 minute interval per IP address.
@@ -303,27 +303,43 @@
     "sms": {
       // Allow/disallow the phone provider. When false, users can't sign up or sign in with SMS.
       // To block new signups only, set enable_signup = false under [auth] instead.
-      "enabled": false,
+      "enabled": true,
       // If enabled, users need to confirm their phone number before signing in.
-      "enable_confirmations": false,
+      "enable_confirmations": true,
       // Template for sending OTP to users
       "template": "Your code is {{ .Code }}",
       // Controls the minimum amount of time that must pass before sending another sms otp.
       "max_frequency": "5s",
+      // Longitud y vigencia del OTP por SMS/WhatsApp (segundos).
+      "otp_length": 6,
+      "otp_expiry": 300,
 
       // Use pre-defined map of phone number to OTP for testing.
       // Keys are the phone number with country code and without the + prefix.
-      // "test_otp": {
-      //   "14152127777": "123456"
-      // },
+      // SOLO LOCAL (B-03): en produccion se usa Twilio Verify (WhatsApp canal primario, SMS respaldo) con secretos via env().
+      "test_otp": {
+        "59170000001": "123456",
+        "59170000002": "123456",
+        "59170000003": "123456",
+        "59170000004": "123456",
+        "59170000005": "123456"
+      },
 
       // Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
+      // Local: proveedor ficticio habilitado solo para que Auth no desactive el login por teléfono; los OTP salen de test_otp.
       "twilio": {
-        "enabled": false,
-        "account_sid": "",
-        "message_service_sid": "",
+        "enabled": true,
+        "account_sid": "ACdev",
+        "message_service_sid": "MGdev",
         // DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
         "auth_token": "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
+      },
+      // Produccion (B-03): activar en el proyecto remoto con secretos reales en env(); nunca valores en git.
+      "twilio_verify": {
+        "enabled": false,
+        "account_sid": "env(SUPABASE_AUTH_SMS_TWILIO_VERIFY_ACCOUNT_SID)",
+        "message_service_sid": "env(SUPABASE_AUTH_SMS_TWILIO_VERIFY_MESSAGE_SERVICE_SID)",
+        "auth_token": "env(SUPABASE_AUTH_SMS_TWILIO_VERIFY_AUTH_TOKEN)"
       }
     },
 
