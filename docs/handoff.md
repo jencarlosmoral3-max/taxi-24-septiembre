@@ -32,7 +32,7 @@ Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en códi
 - Sin costos en el MVP: Supabase Free, mapas OSM, cuenta de Google Play ya existente.
 
 ## No verificado
-- P-02: el teclado numérico tapa el botón "Continuar" de `/phone` (hay que bajar el teclado). Corregir con keyboard avoidance en P-03 o antes de la demo.
+- `BottomSheet.tsx` tiene el mismo `KeyboardAvoidingView` con `behavior` undefined en Android que tenía `/phone` (corregido en PR del fix de teclado, 2026-11-26). Corregir igual cuando una hoja con input (contraoferta, tarifa) entre en una pantalla real. Codex `verify-fix` de ese fix: no verificado (sin cuota hasta 2026-12-03).
 - Unión real a canales Realtime por websocket, push, carga (B-17).
 - `geo` desplegada: solo se verificó el 401 sin JWT; falta una llamada con JWT real (depende del login).
 - GPS en teléfonos con ahorro de batería de fabricante (solo emulador).
