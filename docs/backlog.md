@@ -256,6 +256,7 @@ CA: modo conductor bloqueado hasta `approved` · notificación al ser aprobado/r
 ### C-03 · En línea / fuera de línea + tracking en segundo plano
 labels: app | Medium | C-02, F-06, B-10
 Foreground service con notificación persistente mientras está en línea; envío adaptativo vía `upsert_driver_location`; push FCM de alta prioridad para pedidos con la app en segundo plano.
+Nota (spike F-06): antes de cualquier build de release (M6) quitar `src/app/spike-gps.tsx`, `src/spike/`, el import en `_layout.tsx` y `usesCleartextTraffic` de `app.json`; la tabla `supabase/spikes/gps_spike.sql` nunca va a remoto.
 CA: tracking sigue con pantalla apagada (según resultado de F-06) · al pasar a fuera de línea se detiene.
 
 ### C-04 · Solicitudes entrantes y contraoferta
