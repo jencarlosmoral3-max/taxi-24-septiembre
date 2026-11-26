@@ -1,35 +1,44 @@
-import {
-  GoogleOneTapSignIn,
-  isCancelledResponse,
-  isErrorWithCode,
-  isSuccessResponse,
-} from 'react-native-nitro-google-signin';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
 
-import { createNonce } from './nonce';
 import { supabase } from './supabase';
+
+WebBrowser.maybeCompleteAuthSession();
 
 export type SignInResult = 'ok' | 'cancelled' | 'network' | 'deleted' | 'error';
 
-// El nonce se fija en configure(): se reconfigura en cada intento para que sea nuevo y de un solo uso.
+const NETWORK = /network|fetch|timeout/i;
+
+// Canjea el `code` PKCE de una URL de retorno (vyro://auth/callback?code=...) por la sesion.
+export async function exchangeFromUrl(url: string): Promise<SignInResult> {
+  const { queryParams } = Linking.parse(url);
+  const code = queryParams?.code;
+  if (typeof code !== 'string') {
+    const desc = String(queryParams?.error_description ?? queryParams?.error ?? '');
+    return /banned/i.test(desc) ? 'deleted' : 'error';
+  }
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (!error) return 'ok';
+  if (error.code === 'user_banned') return 'deleted';
+  return NETWORK.test(error.message) ? 'network' : 'error';
+}
+
 export async function signInWithGoogle(): Promise<SignInResult> {
   try {
-    const { raw, hashed } = await createNonce();
-    GoogleOneTapSignIn.configure({ webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID ?? '', nonce: hashed });
-    await GoogleOneTapSignIn.checkPlayServices();
-    const res = await GoogleOneTapSignIn.presentExplicitSignIn();
-    if (isCancelledResponse(res)) return 'cancelled';
-    if (!isSuccessResponse(res) || !res.data.idToken) return 'error';
-    const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: res.data.idToken, nonce: raw });
-    if (!error) return 'ok';
-    if (error.code === 'user_banned') return 'deleted';
-    return /network|fetch/i.test(error.message) ? 'network' : 'error';
+    const redirectTo = Linking.createURL('auth/callback');
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo, skipBrowserRedirect: true, queryParams: { prompt: 'select_account' } },
+    });
+    if (error || !data.url) return error && NETWORK.test(error.message) ? 'network' : 'error';
+    const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+    if (result.type !== 'success') return 'cancelled';
+    return await exchangeFromUrl(result.url);
   } catch (e) {
-    if (isErrorWithCode(e) && /cancel/i.test(String(e.code))) return 'cancelled';
-    return /network|fetch|timeout/i.test(String((e as Error)?.message)) ? 'network' : 'error';
+    return NETWORK.test(String((e as Error)?.message)) ? 'network' : 'error';
   }
 }
 
 export async function signOut() {
-  await GoogleOneTapSignIn.signOut().catch(() => {});
   await supabase.auth.signOut({ scope: 'local' });
 }

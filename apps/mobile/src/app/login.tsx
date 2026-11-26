@@ -46,7 +46,7 @@ export default function Login() {
         )}
         {cancels >= 2 && (
           <Text variant="body14" muted style={styles.error}>
-            Si elegiste una cuenta y no pasó nada, avísanos: la app puede no estar registrada en Google.
+            Si no se abrió Google o no volvió a la app, inténtalo de nuevo.
           </Text>
         )}
         <Button label="Continuar con Google" onPress={onPress} loading={loading} />

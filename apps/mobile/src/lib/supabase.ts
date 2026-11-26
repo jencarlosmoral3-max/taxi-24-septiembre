@@ -9,7 +9,7 @@ import { AppState } from 'react-native';
 export const supabase = createClient<Database>(
   process.env.EXPO_PUBLIC_SUPABASE_URL ?? '',
   process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '',
-  { auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false } },
+  { auth: { storage: AsyncStorage, autoRefreshToken: true, persistSession: true, detectSessionInUrl: false, flowType: 'pkce' } },
 );
 
 // Refresco solo con la app en primer plano (patron de la guia de Supabase para RN).
