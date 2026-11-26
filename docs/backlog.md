@@ -152,6 +152,7 @@ CA: test: pedido viejo pasa a `expired` y notifica al pasajero.
 ### B-10 · Realtime privado y GPS de flota
 labels: backend, seguridad | High | B-02
 Solo Broadcast privado (nada de `postgres_changes`): canales `driver:{id}`, `rider:{id}`, `trip:{id}` con políticas sobre `realtime.messages`. GPS de flota por RPC `upsert_driver_location` (una fila por conductor, envío adaptativo 5–15 s, autovacuum ajustado); posición en vivo del viaje por `trip:{id}`; historial solo durante viaje en lotes.
+Nota (review B-05): políticas de `realtime.messages` con igualdad exacta (nunca `LIKE`) y `extension = 'broadcast'`: SELECT `driver:<uid>` solo si el usuario tiene fila en `drivers`, `rider:<uid>` propio, `trip:<id>` solo pasajero o conductor asignado (conocer el id no basta). INSERT denegado en `driver:*` y `rider:*` (solo el servidor emite); en `trip:*` solo el conductor asignado con viaje activo. `upsert_driver_location` rechaza saltos imposibles (velocidad/distancia) para que un conductor no barra la ciudad con `get_nearby_requests`; decidir si redondear coordenadas a ~100 m hasta `assigned`.
 CA: un usuario no puede unirse al canal de otro · la app reconcilia el estado del ride al reconectar.
 
 ### B-11 · Edge function de notificaciones push
