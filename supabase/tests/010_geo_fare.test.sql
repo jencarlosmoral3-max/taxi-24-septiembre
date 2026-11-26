@@ -1,8 +1,9 @@
 begin;
-select plan(25);
+select plan(31);
 
 insert into auth.users (id, instance_id, aud, role, phone)
 values ('00000000-0000-0000-0000-0000000000a1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000001'),
+       ('00000000-0000-0000-0000-0000000000c1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000003'),
        ('00000000-0000-0000-0000-0000000000b1', '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '59170000002');
 
 create function pg_temp.login(u uuid) returns void language plpgsql as $$
@@ -47,13 +48,37 @@ reset role;
 select pg_temp.login('00000000-0000-0000-0000-0000000000b1');
 select lives_ok($$select public.consume_geo_quota()$$, 'cuota independiente por usuario');
 
--- Compuerta de upstream: primera pasa, la segunda inmediata no; proveedores independientes; proveedor inválido.
-select is(public.geo_upstream_slot('nominatim'), true, 'primer slot concedido');
-select is(public.geo_upstream_slot('nominatim'), false, 'segundo slot inmediato denegado');
-select is(public.geo_upstream_slot('osrm'), true, 'otro proveedor independiente');
-select throws_ok($$select public.geo_upstream_slot('evil')$$, 'P0001', 'invalid_provider', 'proveedor fuera de lista');
-select pg_sleep(1.1);
-select is(public.geo_upstream_slot('nominatim'), true, 'tras 1 s vuelve a haber slot');
+-- Tope diario por usuario (100): con el contador en 99 pasa la 100 y la 101 falla.
+reset role;
+insert into private.geo_usage_day (user_id, day, hits)
+values ('00000000-0000-0000-0000-0000000000b1', (now() at time zone 'utc')::date, 99)
+on conflict (user_id, day) do update set hits = 99;
+select pg_temp.login('00000000-0000-0000-0000-0000000000b1');
+select lives_ok($$select public.consume_geo_quota()$$, 'la llamada diaria 100 pasa');
+select throws_ok($$select public.consume_geo_quota()$$, 'P0001', 'rate_limited', 'la diaria 101 se rechaza');
+
+-- Crédito global acotado por la cuota cobrada del usuario (c1 aún no tiene cuota hoy).
+reset role;
+select pg_temp.login('00000000-0000-0000-0000-0000000000c1');
+select throws_ok($$select public.consume_geo_upstream_credit()$$, 'P0001', 'rate_limited', 'crédito sin cuota cobrada se rechaza');
+select lives_ok($$select public.consume_geo_quota() from generate_series(1, 2)$$, '2 llamadas de cuota para c1');
+select lives_ok($$select public.consume_geo_upstream_credit() from generate_series(1, 2)$$, '2 créditos con 2 cuotas pasan');
+select throws_ok($$select public.consume_geo_upstream_credit()$$, 'P0001', 'rate_limited', 'el crédito N+1 se rechaza');
+
+-- Tope global (2700): con el contador en 2699 pasa una y la siguiente falla (y revierte el contador por usuario).
+reset role;
+update private.geo_usage_day set hits = 10 where user_id = '00000000-0000-0000-0000-0000000000c1';
+insert into private.geo_usage_global (day, hits) values ((now() at time zone 'utc')::date, 2699)
+on conflict (day) do update set hits = 2699;
+select pg_temp.login('00000000-0000-0000-0000-0000000000c1');
+select lives_ok($$select public.consume_geo_upstream_credit()$$, 'la global 2700 pasa');
+select throws_ok($$select public.consume_geo_upstream_credit()$$, 'P0001', 'rate_limited', 'la global 2701 se rechaza');
+reset role;
+select is((select hits from private.geo_usage_global where day = (now() at time zone 'utc')::date), 2700, 'el rechazo no cuenta');
+select is((select upstream from private.geo_usage_day where user_id = '00000000-0000-0000-0000-0000000000c1'), 3, 'el rechazo global revierte el contador por usuario');
+select pg_temp.login('00000000-0000-0000-0000-0000000000c1');
+
+select hasnt_function('public', 'geo_upstream_slot', array['text'], 'compuerta upstream eliminada');
 
 reset role;
 delete from public.app_config;
@@ -61,9 +86,9 @@ select pg_temp.login('00000000-0000-0000-0000-0000000000a1');
 select throws_ok($$select public.suggest_fare(1000, 60)$$, 'P0001', 'config_missing', 'sin fila de config');
 reset role;
 set local role anon;
-select throws_ok($$select public.geo_upstream_slot('osrm')$$, '42501', null, 'anon no puede geo_upstream_slot');
 select throws_ok($$select public.suggest_fare(1000, 60)$$, '42501', null, 'anon no puede suggest_fare');
 select throws_ok($$select public.consume_geo_quota()$$, '42501', null, 'anon no puede consume_geo_quota');
+select throws_ok($$select public.consume_geo_upstream_credit()$$, '42501', null, 'anon no puede consume_geo_upstream_credit');
 
 select * from finish();
 rollback;

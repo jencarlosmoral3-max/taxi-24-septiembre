@@ -9,6 +9,7 @@ const client = (auth: string) => createClient(url, anon, { global: { headers: { 
 Deno.serve((req) =>
   handle(req, {
     fetch,
+    geoapifyKey: Deno.env.get("GEOAPIFY_API_KEY") ?? "",
     getUserId: async (auth) => {
       const { data, error } = await client(auth).auth.getUser(auth.slice(7));
       return error ? null : data.user?.id ?? null;
