@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { formatMoney } from '@/lib/money';
 import { theme } from '@/theme/theme';
@@ -22,11 +22,12 @@ type Props = {
 };
 
 export function OfferCard(p: Props) {
+  const stack = useWindowDimensions().fontScale > 1.3;
   return (
     <View style={styles.card}>
       <View style={styles.row}>
         <View style={styles.flex}>
-          <Text variant="title18" numberOfLines={1}>
+          <Text variant="title18">
             {p.driverName}
           </Text>
           <View style={styles.rating}>
@@ -36,11 +37,11 @@ export function OfferCard(p: Props) {
             </Text>
           </View>
         </View>
-        <Text variant="amount32">{formatMoney(p.priceCents)}</Text>
+        <Text variant="amount32" maxFontSizeMultiplier={1.3}>{formatMoney(p.priceCents)}</Text>
       </View>
       <View style={styles.car}>
-        <MaterialCommunityIcons name="car" size={20} color={theme.colors.textMuted} />
-        <Text variant="body14" muted style={styles.flex} numberOfLines={2}>
+        <MaterialCommunityIcons name="car" size={theme.size.icon} color={theme.colors.textMuted} />
+        <Text variant="body14" muted style={styles.flex}>
           {p.carModel} · {p.carColor} · {p.plate}
         </Text>
       </View>
@@ -50,9 +51,9 @@ export function OfferCard(p: Props) {
         </Text>
         <Text variant="body14Medium">{p.etaMin} min</Text>
       </View>
-      <View style={styles.actions}>
-        <Button label="Rechazar" variant="secondary" onPress={p.onReject} style={styles.flex} />
-        <Button label="Aceptar" onPress={p.onAccept} style={styles.flex} />
+      <View style={[styles.actions, stack && styles.stacked]}>
+        <Button label="Rechazar" variant="secondary" onPress={p.onReject} style={stack ? undefined : styles.flex} />
+        <Button label="Aceptar" variant="success" onPress={p.onAccept} style={stack ? undefined : styles.flex} />
       </View>
     </View>
   );
@@ -64,5 +65,6 @@ const styles = StyleSheet.create({
   rating: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs },
   car: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs },
   actions: { flexDirection: 'row', gap: theme.spacing.sm, marginTop: theme.spacing.xs },
+  stacked: { flexDirection: 'column' },
   flex: { flex: 1 },
 });

@@ -4,24 +4,24 @@ import { theme } from '@/theme/theme';
 
 import { Text } from './Text';
 
-type Props = { label: string; selected?: boolean; onPress: () => void; disabled?: boolean };
+type Props = { label: string; selected?: boolean; onPress: () => void; disabled?: boolean; accessibilityLabel?: string; neutral?: boolean };
 
-export function Chip({ label, selected = false, onPress, disabled }: Props) {
+export function Chip({ label, selected = false, onPress, disabled, accessibilityLabel, neutral }: Props) {
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected, disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [
         styles.chip,
-        selected && styles.selected,
+        selected && (neutral ? styles.selectedNeutral : styles.selected),
         pressed && styles.pressed,
         disabled && styles.disabled,
       ]}
     >
-      <Text variant="body14Medium" color={selected ? theme.colors.onPrimary : theme.colors.text}>
+      <Text variant="body14Medium" color={disabled ? theme.colors.textMuted : selected && !neutral ? theme.colors.onPrimary : theme.colors.text} maxFontSizeMultiplier={1.3}>
         {label}
       </Text>
     </Pressable>
@@ -41,6 +41,7 @@ const styles = StyleSheet.create({
     borderColor: theme.colors.border,
   },
   selected: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+  selectedNeutral: { borderColor: theme.colors.text },
   pressed: { opacity: 0.8 },
-  disabled: { opacity: 0.4 },
+  disabled: { backgroundColor: theme.colors.surface },
 });

@@ -1,5 +1,6 @@
-import { View, StyleSheet } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
+import { parsePhoneDigits } from '@/lib/money';
 import { theme } from '@/theme/theme';
 
 import { Text } from './Text';
@@ -15,15 +16,14 @@ export function PhoneField({ value, onChange, error, label = 'Número de celular
     <TextField
       label={label}
       value={value}
-      onChangeText={(t) => onChange(t.replace(/\D/g, '').slice(0, 8))}
-      keyboardType="number-pad"
-      maxLength={8}
+      onChangeText={(t) => onChange(parsePhoneDigits(t))}
+      inputMode="numeric"
       placeholder="7XXXXXXX"
       autoComplete="tel-national"
       textContentType="telephoneNumber"
       error={error}
       prefix={
-        <View style={styles.prefix} accessible accessibilityLabel="Código de país 591">
+        <View style={styles.prefix} accessible accessibilityLabel="más 591">
           <Text variant="body16Medium">+591</Text>
         </View>
       }

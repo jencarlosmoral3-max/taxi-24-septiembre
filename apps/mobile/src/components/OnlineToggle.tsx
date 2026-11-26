@@ -11,7 +11,7 @@ export function OnlineToggle({ online, onToggle, disabled }: Props) {
   return (
     <Pressable
       accessibilityRole="switch"
-      accessibilityLabel={label}
+      accessibilityLabel="Disponible para viajes"
       accessibilityState={{ checked: online, disabled: !!disabled }}
       disabled={disabled}
       onPress={() => onToggle(!online)}
@@ -23,14 +23,14 @@ export function OnlineToggle({ online, onToggle, disabled }: Props) {
       ]}
     >
       <View style={[styles.dot, { backgroundColor: online ? theme.colors.text : theme.colors.textMuted }]} />
-      <Text variant="title20">{label}</Text>
+      <Text variant="title20" maxFontSizeMultiplier={1.3}>{label}</Text>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 72,
+    minHeight: theme.size.toggleHeight,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
   },
   on: { backgroundColor: theme.colors.successStrong },
   off: { backgroundColor: theme.colors.surface2, borderWidth: 1, borderColor: theme.colors.border },
-  dot: { width: 12, height: 12, borderRadius: 6 },
+  dot: { width: theme.size.dot, height: theme.size.dot, borderRadius: theme.size.dot / 2 },
   pressed: { opacity: 0.8 },
   disabled: { opacity: 0.4 },
 });

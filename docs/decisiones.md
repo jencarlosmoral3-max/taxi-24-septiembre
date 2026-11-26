@@ -41,6 +41,7 @@ Aprobado por: CTO (en sesión con Claude, plan `docs/plan-planificacion-mvp.md`)
 | Origen del pasajero exacto para los conductores cercanos (sin redondear a ~100 m antes de `assigned`) | CTO, 2026-11-26 ("debe ser exacto el punto de donde se recogerá al pasajero") | Riesgo: un conductor que falsea ubicación podría ver orígenes; mitigado por el control de saltos (≤ 120 km/h) | Redondear en `get_nearby_requests` |
 | Android mínimo soportado: 7.0 (API 24), el mínimo de Expo SDK 58. El Samsung J7 de prueba se asume compatible (J7 2016/Prime/Pro); el J7 2015 (Android 6) queda fuera | CTO, 2026-11-26 ("asume la más antigua aún soportada") | Versión real del J7 no verificada | Bajar de API 24 no es posible sin bajar de SDK de Expo |
 | Configuración del proyecto Supabase remoto (proveedor Google, migraciones) la hace el chairman por el MCP de Supabase en la próxima sesión | CTO, 2026-11-26 | — | — |
+| Contraoferta del conductor en dos pasos (el chip +1/+2/+5 elige, el botón "Ofertar Bs X" envía) para evitar ofertas por toques accidentales manejando. Aceptar oferta en verde; amarillo solo para la acción principal de la vista | Chairman tras review de UI de P-01 | — | Cambiar `RequestCard` |
 
 Costos: ninguno aprobado todavía. Pendiente F-02 (Google Maps Platform, Supabase Pro, Google Play). Twilio fuera del piloto (login con Google).
 No verificado: capacidad del equipo (sin fechas), costo real de SMS a Bolivia, calidad de Google Places en Santa Cruz.

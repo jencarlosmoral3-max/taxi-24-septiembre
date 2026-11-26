@@ -1,4 +1,5 @@
 // Solo desarrollo (P-01): muestra todos los componentes para verificacion visual.
+import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -31,15 +32,21 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function DevComponents() {
+  if (!__DEV__) return <Redirect href="/" />;
+  return <DevComponentsScreen />;
+}
+
+function DevComponentsScreen() {
   const insets = useSafeAreaInsets();
   const { mode, setMode } = useAppMode();
   const [phone, setPhone] = useState('7123456');
-  const [money, setMoney] = useState<number | null>(15);
+  const [money, setMoney] = useState<number | null>(1500);
   const [text, setText] = useState('');
   const [chip, setChip] = useState('a');
   const [online, setOnline] = useState(false);
   const [rating, setRating] = useState(4);
   const [sheet, setSheet] = useState(false);
+  const [expiresAt] = useState(() => Date.now() + 30_000);
   const noop = () => {};
 
   return (
@@ -60,7 +67,7 @@ export default function DevComponents() {
         <TextField label="Nombre" value={text} onChangeText={setText} placeholder="Tu nombre" />
         <PhoneField value={phone} onChange={setPhone} />
         <PhoneField value="12" onChange={noop} error="Debe empezar con 6 o 7 y tener 8 dígitos" />
-        <MoneyField value={money} onChange={setMoney} />
+        <MoneyField valueCents={money} onChangeCents={setMoney} />
       </Section>
       <Section title="Chips">
         <View style={styles.row}>
@@ -96,7 +103,7 @@ export default function DevComponents() {
           destination="Aeropuerto Viru Viru"
           distanceKm={12.4}
           offeredCents={3500}
-          expiresInSeconds={30}
+          expiresAt={expiresAt}
           onAccept={noop}
           onCounter={noop}
           onIgnore={noop}

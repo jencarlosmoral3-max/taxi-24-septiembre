@@ -9,7 +9,7 @@ type Props = {
   size?: number; // solo en modo display
 };
 
-export function RatingStars({ value, onChange, size = 16 }: Props) {
+export function RatingStars({ value, onChange, size = theme.size.starDisplay }: Props) {
   const stars = [1, 2, 3, 4, 5];
   if (!onChange) {
     return (
@@ -37,11 +37,11 @@ export function RatingStars({ value, onChange, size = 16 }: Props) {
           key={n}
           accessibilityRole="radio"
           accessibilityLabel={`${n} ${n === 1 ? 'estrella' : 'estrellas'}`}
-          accessibilityState={{ selected: n === value }}
+          accessibilityState={{ checked: n === value }}
           onPress={() => onChange(n)}
           style={({ pressed }) => [styles.hit, pressed && { opacity: 0.7 }]}
         >
-          <MaterialCommunityIcons name={n <= value ? 'star' : 'star-outline'} size={36} color={theme.colors.primary} />
+          <MaterialCommunityIcons name={n <= value ? 'star' : 'star-outline'} size={theme.size.starInput} color={theme.colors.primary} />
         </Pressable>
       ))}
     </View>

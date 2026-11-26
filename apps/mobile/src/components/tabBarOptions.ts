@@ -8,7 +8,7 @@ export const tabBarOptions = {
   tabBarStyle: {
     backgroundColor: theme.colors.surface,
     borderTopColor: theme.colors.border,
-    minHeight: 64,
+    minHeight: theme.size.tabBarMinHeight,
   },
   tabBarLabelStyle: theme.typography.body14Medium,
 } as const;

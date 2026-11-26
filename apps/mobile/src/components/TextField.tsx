@@ -29,7 +29,7 @@ export function TextField({ label, error, prefix, inputStyle, onFocus, onBlur, e
       >
         {prefix}
         <TextInput
-          accessibilityLabel={label}
+          accessibilityLabel={error ? `${label}. ${error}` : label}
           placeholderTextColor={theme.colors.textMuted}
           selectionColor={theme.colors.primary}
           editable={editable}
