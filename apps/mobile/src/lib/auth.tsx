@@ -24,6 +24,7 @@ export function useMyPhone(userId: string | undefined) {
   return useQuery({
     queryKey: ['my-phone', userId],
     enabled: !!userId,
+    retry: 1,
     queryFn: async (): Promise<string | null> => {
       const { data, error } = await supabase.rpc('get_my_phone');
       if (error) throw error;

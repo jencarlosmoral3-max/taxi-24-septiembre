@@ -5,7 +5,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useMyPhone, useSession } from '@/lib/auth';
@@ -51,14 +51,21 @@ export default function RootLayout() {
 function Gate() {
   const session = useSession();
   const phone = useMyPhone(session?.user.id);
-  const loading = session === undefined || (!!session && phone.isPending && !phone.isError);
+  const sessionLoaded = session !== undefined;
 
   useEffect(() => {
-    if (!loading) SplashScreen.hideAsync().catch(() => {});
-  }, [loading]);
+    if (sessionLoaded) SplashScreen.hideAsync().catch(() => {});
+  }, [sessionLoaded]);
 
-  if (loading) return null;
-  if (session && phone.isError) {
+  if (!sessionLoaded) return null;
+  if (session && phone.isPending && !phone.isError) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
+        <ActivityIndicator color={theme.colors.primary} />
+      </View>
+    );
+  }
+  if (session && phone.isError && phone.data === undefined) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', gap: theme.spacing.md, padding: theme.size.screenPadding }}>
         <Text variant="title20">No pudimos cargar tu cuenta</Text>
@@ -79,6 +86,10 @@ function Gate() {
       </Stack.Protected>
       <Stack.Protected guard={hasSession && hasPhone}>
         <Stack.Screen name="index" />
+      </Stack.Protected>
+      <Stack.Protected guard={__DEV__}>
+        <Stack.Screen name="dev-components" />
+        <Stack.Screen name="spike-gps" />
       </Stack.Protected>
     </Stack>
   );

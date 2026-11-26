@@ -8,7 +8,7 @@ import {
 import { createNonce } from './nonce';
 import { supabase } from './supabase';
 
-export type SignInResult = 'ok' | 'cancelled' | 'network' | 'error';
+export type SignInResult = 'ok' | 'cancelled' | 'network' | 'deleted' | 'error';
 
 // El nonce se fija en configure(): se reconfigura en cada intento para que sea nuevo y de un solo uso.
 export async function signInWithGoogle(): Promise<SignInResult> {
@@ -21,6 +21,7 @@ export async function signInWithGoogle(): Promise<SignInResult> {
     if (!isSuccessResponse(res) || !res.data.idToken) return 'error';
     const { error } = await supabase.auth.signInWithIdToken({ provider: 'google', token: res.data.idToken, nonce: raw });
     if (!error) return 'ok';
+    if (error.code === 'user_banned') return 'deleted';
     return /network|fetch/i.test(error.message) ? 'network' : 'error';
   } catch (e) {
     if (isErrorWithCode(e) && /cancel/i.test(String(e.code))) return 'cancelled';
@@ -30,5 +31,5 @@ export async function signInWithGoogle(): Promise<SignInResult> {
 
 export async function signOut() {
   await GoogleOneTapSignIn.signOut().catch(() => {});
-  await supabase.auth.signOut();
+  await supabase.auth.signOut({ scope: 'local' });
 }

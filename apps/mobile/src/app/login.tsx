@@ -8,6 +8,7 @@ import { theme } from '@/theme/theme';
 
 const ERRORS = {
   network: 'Sin conexión. Revisa tu internet e inténtalo de nuevo.',
+  deleted: 'Esta cuenta fue eliminada.',
   error: 'No pudimos iniciar sesión. Inténtalo de nuevo.',
 } as const;
 
@@ -15,13 +16,15 @@ export default function Login() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cancels, setCancels] = useState(0);
 
   const onPress = async () => {
     setLoading(true);
     setError(null);
     const r = await signInWithGoogle();
     setLoading(false);
-    if (r === 'network' || r === 'error') setError(ERRORS[r]); // 'cancelled' no muestra nada; 'ok' lo redirige el gate
+    setCancels(r === 'cancelled' ? cancels + 1 : 0);
+    if (r === 'network' || r === 'error' || r === 'deleted') setError(ERRORS[r]); // 'cancelled' no muestra nada; 'ok' lo redirige el gate
   };
 
   return (
@@ -39,6 +42,11 @@ export default function Login() {
         {!!error && (
           <Text variant="body14" color={theme.colors.danger} accessibilityLiveRegion="polite" style={styles.error}>
             {error}
+          </Text>
+        )}
+        {cancels >= 2 && (
+          <Text variant="body14" muted style={styles.error}>
+            Si elegiste una cuenta y no pasó nada, avísanos: la app puede no estar registrada en Google.
           </Text>
         )}
         <Button label="Continuar con Google" onPress={onPress} loading={loading} />

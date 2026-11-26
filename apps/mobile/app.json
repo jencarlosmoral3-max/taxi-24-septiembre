@@ -9,6 +9,7 @@
     "userInterfaceStyle": "dark",
     "android": {
       "package": "bo.vyro.app",
+      "allowBackup": false,
       "adaptiveIcon": {
         "backgroundColor": "#F6C200",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
