@@ -12,5 +12,13 @@ Aprobado por: CTO (en sesión con Claude, plan `docs/plan-planificacion-mvp.md`)
 | Una sola app con modo Pasajero/Conductor | Un build, un flujo de login; conductor gated por aprobación | Separar en dos apps si el piloto lo pide |
 | Stack Expo + Supabase sa-east-1 + Next.js (ver `docs/arquitectura.md`) | Recomendación del chairman; council `council-20261126-015521` (Claude + Gemini a favor, Codex falló) con ajustes: GPS por RPC en vez de Realtime, sin `postgres_changes`, OTP WhatsApp primario, push FCM, load test | Datos y lógica son Postgres estándar; reemplazar Auth/Realtime |
 
+## 2026-11-25 · Repo, Figma y contraste (D-01)
+| Decisión | Quién / por qué | Evidencia | Cómo revertir |
+|---|---|---|---|
+| Repo movido a `jencarlosmoral3-max/taxi-24-septiembre` (privado). Se recreó el PR #1 ahí | Pedido del CTO en sesión | `git remote -v`: `origin` nuevo, `old-origin` = `JoseluisLarrazabal/taxi-24-septiembre` | El repo viejo sigue intacto. **Borrarlo requiere confirmación del CTO** |
+| Sin branch protection por ahora | GitHub responde 403 "Upgrade to GitHub Pro or make this repository public" en ambas cuentas (plan Free, repo privado) | `gh api repos/.../branches/main/protection` | CTO elige: GitHub Pro (~US$4/mes, precio no verificado hoy, no aprobado) o repo público. Mientras tanto, cada merge pide confirmación (regla 4) |
+| Tokens nuevos `danger-strong #D92D20` y `success-strong #178048` | Blanco sobre `danger` (3.55) y `success` (3.37) no pasa AA; `docs/arte.md` ya decía "oscurecer" | Tabla de contraste en `docs/arte.md` | Quitar los tokens y aceptar AA solo texto grande |
+| Figma con 3 páginas (Fundamentos, App móvil, Admin web) en lugar de 8 | La cuenta Figma es Starter: `createPage` falla con "The Starter plan only comes with 3 pages" | Archivo `5qJ0oo6BIxxdfIrrZdTDEC` | Plan Professional de Figma (no aprobado) y separar en páginas |
+
 Costos: ninguno aprobado todavía. Pendiente F-02 (Twilio, Google Maps Platform, Supabase Pro, Google Play).
 No verificado: capacidad del equipo (sin fechas), costo real de SMS a Bolivia, calidad de Google Places en Santa Cruz.
