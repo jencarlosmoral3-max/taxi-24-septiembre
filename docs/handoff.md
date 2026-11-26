@@ -11,7 +11,7 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 - **Linear:** team `IND`, proyecto `P-IND-4` "App Taxi 24 de Septiembre — MVP" (8 milestones, 70 issues, 3 documentos).
 
 ## Estado
-- Repo solo con docs, sin código. Rama `chore/monorepo-ci` (F-03: monorepo pnpm + CI) en curso.
+- F-03: monorepo pnpm (`apps/mobile` Expo SDK 58 + Expo Router, `apps/admin` Next.js 16, `supabase/` CLI 3.4.0 con test pgTAP de humo) y CI (`typecheck`, `lint`, `build-admin`, `db-test`). Verificado local: `pnpm install --frozen-lockfile`, `pnpm typecheck`, `pnpm lint`, `pnpm build`, `supabase db start && supabase test db` → PASS. Falta: que la CI corra verde en GitHub y branch protection (bloqueada por plan).
 - D-01 hecho en Figma: colecciones `Color` (12) y `Dimension` (14), 9 estilos de texto Poppins, portada y muestra de tokens. Contraste en `docs/arte.md`.
 - Docs: [arte](arte.md) · [arquitectura](arquitectura.md) · [pantallas](pantallas.md) · [backlog](backlog.md) · [decisiones](decisiones.md).
 - Council de stack: `~/.council/taxi-24-septiembre/council-20261126-015521/viewer.html` (fuera del repo; la síntesis está en `docs/arquitectura.md` y `docs/decisiones.md`).
@@ -26,6 +26,8 @@ Ver [`docs/decisiones.md`](decisiones.md). Resumen: app independiente, Figma pri
 - Codex no opinó en el council (error de la CLI): la validación del stack es de 2 de 3 voces.
 - GPS en segundo plano en Android gama baja: pendiente spike F-06 (requiere teléfonos reales y Supabase).
 - Branch protection: no disponible en plan Free con repo privado (403). Sin checks requeridos, cada merge pide confirmación del CTO.
+- Mobile `typecheck` es `tsc --noEmit` con `typedRoutes` activo: los tipos de rutas (`.expo/types`) no se generan en CI. Hoy pasa en clon limpio; revisar en P-01 al agregar navegación tipada.
+- Supabase CLI 3.4.0 genera `supabase/config.jsonc` (no `config.toml`).
 - Figma: montos usan tabular-nums en código; el estilo de Figma no fija la feature OpenType.
 
 ## Registro de planes cerrados
