@@ -47,7 +47,7 @@ export async function signOut() {
   await supabase.auth.signOut({ scope: 'local' });
   // Privacidad: otra cuenta en el mismo telefono no debe ver recientes ni viaje anterior.
   useTripDraft.getState().reset();
-  await useTripDraft.persist.clearStorage();
   useAppMode.getState().setMode('passenger');
   resetDemo();
+  await useTripDraft.persist.clearStorage();
 }
