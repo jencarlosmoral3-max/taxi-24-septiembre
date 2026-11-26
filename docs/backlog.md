@@ -200,11 +200,13 @@ CA: p95 de `accept_offer` y `upsert_driver_location` medidos · sin dobles asign
 ### P-01 · Setup Expo + tema + navegación
 labels: app | Medium | F-03, D-01
 Expo Router, TypeScript estricto, tokens de `docs/arte.md` como tema, fuentes Poppins, TanStack Query, Zustand, cliente Supabase, EAS dev build con Google Maps.
+Nota (2026-11-26): proyecto remoto `https://mrhwceepvcjcdntvnsgs.supabase.co`, publishable key `sb_publishable_WTocgXs40qoSK6KjAkSPUQ_FIWTI65l` (pública por diseño: va en la app como `EXPO_PUBLIC_SUPABASE_ANON_KEY`; la seguridad la dan RLS y grants). La secret/service_role key nunca va en la app ni en git.
 CA: dev build Android corre en teléfono real · tema aplicado.
 
 ### P-02 · Onboarding, login con Google y registro
 labels: app | Medium | P-01, B-03, D-05
 Nota (B-03): Google Sign-In nativo con nonce (hasheado a Google, crudo a `signInWithIdToken`); pedir el teléfono con `set_my_phone` antes de pedir u ofertar (`phone_required`). `get_my_phone` puede devolver null aunque el tipo generado diga `string`.
+Nota (Google OAuth, 2026-11-26): cliente web `458888036724-8unc4j538s2u7evpp9u3iu3ft6acvvps.apps.googleusercontent.com` (va como `webClientId` en `GoogleSignin.configure` y en Supabase → Google → Client IDs); cliente Android `458888036724-teq59tp1klnunrevv12ikk3lvajb8qlj.apps.googleusercontent.com` (paquete `bo.vyro.app`, SHA-1 debug de la PC de desarrollo). Release/EAS necesita otro cliente Android con su SHA-1. El secret nunca va en la app ni en git (local: `supabase/.env`, ignorado).
 CA: login completo con número real · sesión persiste al reabrir · errores (código inválido, sin red) manejados.
 
 ### P-03 · Home con mapa y ubicación actual
