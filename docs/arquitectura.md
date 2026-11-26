@@ -1,4 +1,4 @@
-# Arquitectura de software — App Taxi 24 de Septiembre
+# Arquitectura de software — Vyro (app del Sindicato 24 de Septiembre)
 
 Estado: aprobada (plan del CTO 2026-11-25) y validada por council `council-20261126-015521` (Claude + Gemini a favor de la opción A con ajustes; Codex sin opinión por error). Confianza: media (2 de 3 voces).
 

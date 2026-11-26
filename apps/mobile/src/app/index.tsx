@@ -1,14 +1,19 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 
 export default function Index() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Taxi 24</Text>
+      <Image
+        source={require('../../assets/images/vyro-wordmark-light.png')}
+        style={styles.logo}
+        resizeMode="contain"
+        accessibilityLabel="Vyro"
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#191919' },
-  title: { color: '#FFFFFF', fontSize: 32, fontWeight: '700' },
+  logo: { width: 200, height: 73 },
 });

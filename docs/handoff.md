@@ -1,11 +1,11 @@
-# Handoff — App Taxi 24 de Septiembre
+# Handoff — Vyro (app del Sindicato 24 de Septiembre)
 
 Documento vivo. Se actualiza al cerrar cada iteración o PR.
 
 ## Reanudación
 - **Hito activo:** planificación del MVP → cerrada al mergear este PR. Siguiente: **M0 Fundamentos** + **M1 Diseño Figma**.
 - **Plan:** [`docs/plan-planificacion-mvp.md`](plan-planificacion-mvp.md) (aprobado por el CTO 2026-11-25).
-- **Siguiente paso concreto:** D-02 (librería de componentes en la página Fundamentos del Figma) sobre los tokens de D-01. **Bloqueado:** el MCP de Figma cortó por límite del plan Starter (~20 llamadas/mes según la doc de Figma, sin fecha de reinicio publicada). Hecho de D-02: 18 íconos Lucide como componentes (sección "Íconos", trazo 1.75, color ligado a `color/text`). Falta: Button, Chip, OnlineToggle, Input, cards de oferta/pedido, bottom sheet, tab bar, rating, marcadores. Antes de cualquier trabajo de UI se carga el skill `ui-workflow` (y para Figma `figma-use` + `figma-generate-library`). En paralelo, del CTO/directiva: F-01 (nombre y logo), F-02 (costos), branch protection (Pro o público) y borrar el repo viejo.
+- **Siguiente paso concreto:** spike GPS F-06 en emulador (`docs/plan-spike-gps.md`), después M2 backend (B-01 schema) y el tema + componentes base en `apps/mobile` (sin Figma, decisión del CTO 2026-11-25). Merge automático con CI verde (autorizado por el CTO).
 - **Repo:** `jencarlosmoral3-max/taxi-24-septiembre` (privado; movido desde `JoseluisLarrazabal/taxi-24-septiembre`, que sigue existiendo como `old-origin`). Para `gh`: `GH_TOKEN=$(gh auth token --user jencarlosmoral3-max) gh ...`.
 - **Figma:** [Taxi 24 — App (MVP)](https://www.figma.com/design/5qJ0oo6BIxxdfIrrZdTDEC), 3 páginas por plan Starter.
 - **Linear:** team `IND`, proyecto `P-IND-4` "App Taxi 24 de Septiembre — MVP" (8 milestones, 70 issues, 3 documentos).

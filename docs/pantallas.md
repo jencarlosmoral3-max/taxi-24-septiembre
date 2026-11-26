@@ -1,4 +1,4 @@
-# Pantallas y flujos — App Taxi 24 de Septiembre
+# Pantallas y flujos — Vyro (app del Sindicato 24 de Septiembre)
 
 Una sola app móvil con modo **Pasajero** y modo **Conductor** (switch en perfil, como inDrive). El modo conductor solo se habilita cuando el sindicato aprueba al conductor. Más un **panel web** para la directiva.
 
