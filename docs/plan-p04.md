@@ -1,6 +1,6 @@
 # Plan P-04 · Búsqueda de destino
 
-Estado: en curso (2026-11-26). Rama `feat/p04-destino`. Backlog: `docs/backlog.md` → P-04 (depende de P-03 y B-12).
+Estado: hecho (2026-11-26). Rama `feat/p04-destino`. Backlog: `docs/backlog.md` → P-04 (depende de P-03 y B-12).
 
 ## Objetivo
 Desde el home, el pasajero elige su destino: autocompletado contra la Edge Function `geo` (Photon), recientes guardados en el teléfono, o fijando el punto en el mapa. El origen es la ubicación GPS o el punto fijado en el home. P-05 consume origen y destino.
@@ -35,3 +35,9 @@ Desde el home, el pasajero elige su destino: autocompletado contra la Edge Funct
 ## Verificación (criterios)
 - `tsc` y `pnpm lint` en verde; CI 5/5.
 - Emulador: buscar "Cristo" → resultados en Santa Cruz; elegir uno → home muestra el destino; reciente aparece al volver a buscar; fijar en mapa → nombre por reverse; 429 visible si se fuerza (opcional).
+
+## Resultado (2026-11-26)
+- Emulador: buscar "Cristo" → resultados de Santa Cruz (Av. Cristo Redentor, Rotonda Cuarto Anillo…); elegir uno → el home muestra nombre y dirección con "Cambiar"; el destino aparece en Recientes; fijar en el mapa → nombre por reverse ("Calle Murillo 18, Centro"). Cubre "geo con JWT real".
+- Hallazgo: Photon y Nominatim públicos responden 403 a las IPs de Supabase Edge (logs de la función). Proveedor cambiado a Geoapify en un PR propio (`fix/geo-geoapify`, ver `decisiones.md`).
+- Gates: `/code-review` (5 importantes + 3 nits), `/ponytail-review` (sin bloqueantes), gate de UI (4 must + 5 should): aplicados en `fb284b8` y vistos en el emulador (Volver, Reintentar, error en rojo, "Fijar en el mapa" arriba, chip de ayuda en el mapa). Codex: no verificado (sin cuota hasta 2026-12-03).
+- No verificado: TalkBack, 429 forzado, rechazo de un punto fuera del área de servicio en pantalla, borrado de recientes al cerrar sesión en pantalla.
