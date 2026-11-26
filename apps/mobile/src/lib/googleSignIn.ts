@@ -1,6 +1,8 @@
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
 
+import { useTripDraft } from '@/store/tripDraft';
+
 import { supabase } from './supabase';
 
 WebBrowser.maybeCompleteAuthSession();
@@ -41,4 +43,7 @@ export async function signInWithGoogle(): Promise<SignInResult> {
 
 export async function signOut() {
   await supabase.auth.signOut({ scope: 'local' });
+  // Privacidad: otra cuenta en el mismo telefono no debe ver recientes ni viaje anterior.
+  useTripDraft.getState().reset();
+  await useTripDraft.persist.clearStorage();
 }

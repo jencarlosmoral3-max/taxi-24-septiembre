@@ -11,10 +11,13 @@ type TripDraft = {
   origin: Place | null;
   destination: Place | null;
   recents: Place[];
+  reset: () => void;
   setOrigin: (p: Place | null) => void;
   // Elegir destino tambien lo agrega a recientes (dedupe por lat/lng redondeado).
   setDestination: (p: Place | null) => void;
 };
+
+const EMPTY = { origin: null, destination: null, recents: [] };
 
 export const useTripDraft = create<TripDraft>()(
   persist(
@@ -22,6 +25,7 @@ export const useTripDraft = create<TripDraft>()(
       origin: null,
       destination: null,
       recents: [],
+      reset: () => set(EMPTY),
       setOrigin: (origin) => set({ origin }),
       setDestination: (destination) =>
         set((s) => ({

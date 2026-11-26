@@ -26,7 +26,10 @@ export default function Index() {
   const [servicesOff, setServicesOff] = useState(false);
   const [mapKey, setMapKey] = useState(0);
   const [mapError, setMapError] = useState(false);
-  const { destination, setOrigin } = useTripDraft();
+  const destination = useTripDraft((s) => s.destination);
+  const setOrigin = useTripDraft((s) => s.setOrigin);
+  const lastCenter = useRef<LngLat | null>(null);
+  const lastFixKey = useRef('');
   const setOriginAt = useCallback((lng: number, lat: number) => setOrigin({ name: 'Mi ubicación', address: '', lat, lng }), [setOrigin]);
 
   const apply = useCallback((p: Location.LocationPermissionResponse) => {
@@ -55,7 +58,11 @@ export default function Index() {
       ({ coords }) => {
         const c: LngLat = [coords.longitude, coords.latitude];
         setFix(c);
-        setOriginAt(c[0], c[1]);
+        const k = `${c[0].toFixed(4)},${c[1].toFixed(4)}`;
+        if (k !== lastFixKey.current) {
+          lastFixKey.current = k;
+          setOriginAt(c[0], c[1]);
+        }
         if (!centered.current) {
           centered.current = true;
           camera.current?.jumpTo({ center: c, zoom: 16 });
@@ -71,6 +78,12 @@ export default function Index() {
   const request = () => Location.requestForegroundPermissionsAsync().then(apply, () => setPerm('denied'));
 
   const pinMode = perm === 'denied' || (perm === 'granted' && servicesOff);
+  useEffect(() => {
+    if (!pinMode) return;
+    lastFixKey.current = ''; // el origen pasa a ser el centro del mapa: el proximo fix GPS debe reaplicarse
+    const c = lastCenter.current ?? SANTA_CRUZ;
+    setOriginAt(c[0], c[1]);
+  }, [pinMode, setOriginAt]);
   return (
     <View style={styles.container}>
       <Map
@@ -84,6 +97,7 @@ export default function Index() {
         onDidFinishLoadingMap={() => setMapError(false)}
         onDidFailLoadingMap={() => setMapError(true)}
         onRegionDidChange={(e) => {
+          lastCenter.current = e.nativeEvent.center as LngLat;
           if (pinMode) setOriginAt(e.nativeEvent.center[0], e.nativeEvent.center[1]);
         }}
       >
@@ -146,16 +160,24 @@ export default function Index() {
             )}
           </Card>
         ) : null}
-        {!mapError && perm !== 'ask' && !(perm === 'granted' && servicesOff) && (
+        {!mapError && perm !== 'ask' && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={destination ? `Destino: ${destination.name}. Cambiar` : '¿A dónde vas?'}
+            accessibilityHint="Abre la búsqueda de destino"
             onPress={() => router.push('/destino')}
             style={styles.search}
           >
-            <Text variant="body16Medium" numberOfLines={1} muted={!destination} style={styles.flex}>
-              {destination ? destination.name : '¿A dónde vas?'}
-            </Text>
+            <View style={styles.flex}>
+              <Text variant="body16Medium" numberOfLines={1} muted={!destination}>
+                {destination ? destination.name : '¿A dónde vas?'}
+              </Text>
+              {!!destination?.address && (
+                <Text variant="body14" muted numberOfLines={1}>
+                  {destination.address}
+                </Text>
+              )}
+            </View>
             {destination && (
               <Text variant="body14Medium" color={theme.colors.primary}>
                 Cambiar
