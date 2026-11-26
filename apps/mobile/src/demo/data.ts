@@ -20,7 +20,7 @@ export type DemoRequest = Pick<Tables<'rides'>, 'id' | 'origin_text' | 'destinat
   pickup: Place;
   dropoff: Place;
 };
-export type DemoTrip = Pick<Tables<'rides'>, 'id' | 'origin_text' | 'destination_text' | 'final_fare_cents' | 'status' | 'completed_at'> & {
+export type DemoTrip = Pick<Tables<'rides'>, 'id' | 'origin_text' | 'destination_text' | 'final_fare_cents' | 'status' | 'completed_at' | 'cancelled_at'> & {
   driver: DemoDriver;
   stars: number | null;
 };
@@ -75,10 +75,10 @@ export const DEMO_REQUEST: DemoRequest = {
 };
 
 export const DEMO_TRIPS: DemoTrip[] = [
-  { id: 'demo-viaje-1', origin_text: PLACES.plaza.name, destination_text: PLACES.cristo.name, final_fare_cents: 1500, status: 'completed', completed_at: '2026-11-25T18:42:00-04:00', driver: DEMO_DRIVERS[0], stars: 5 },
-  { id: 'demo-viaje-2', origin_text: PLACES.equipetrol.name, destination_text: PLACES.ventura.name, final_fare_cents: 1800, status: 'completed', completed_at: '2026-11-24T09:15:00-04:00', driver: DEMO_DRIVERS[1], stars: 4 },
-  { id: 'demo-viaje-3', origin_text: PLACES.ventura.name, destination_text: PLACES.plan3000.name, final_fare_cents: 3500, status: 'completed', completed_at: '2026-11-22T20:05:00-04:00', driver: DEMO_DRIVERS[2], stars: 5 },
-  { id: 'demo-viaje-4', origin_text: PLACES.plaza.name, destination_text: PLACES.equipetrol.name, final_fare_cents: null, status: 'cancelled_passenger', completed_at: null, driver: DEMO_DRIVERS[0], stars: null },
+  { id: 'demo-viaje-1', origin_text: PLACES.plaza.name, destination_text: PLACES.cristo.name, final_fare_cents: 1500, status: 'completed', completed_at: '2026-11-25T18:42:00-04:00', cancelled_at: null, driver: DEMO_DRIVERS[0], stars: 5 },
+  { id: 'demo-viaje-2', origin_text: PLACES.equipetrol.name, destination_text: PLACES.ventura.name, final_fare_cents: 1800, status: 'completed', completed_at: '2026-11-24T09:15:00-04:00', cancelled_at: null, driver: DEMO_DRIVERS[1], stars: 4 },
+  { id: 'demo-viaje-3', origin_text: PLACES.ventura.name, destination_text: PLACES.plan3000.name, final_fare_cents: 3500, status: 'completed', completed_at: '2026-11-22T20:05:00-04:00', cancelled_at: null, driver: DEMO_DRIVERS[2], stars: 5 },
+  { id: 'demo-viaje-4', origin_text: PLACES.plaza.name, destination_text: PLACES.equipetrol.name, final_fare_cents: null, status: 'cancelled_passenger', completed_at: null, cancelled_at: '2026-11-21T19:30:00-04:00', driver: DEMO_DRIVERS[0], stars: null },
 ];
 
 // Ganancias del conductor (centavos de Bs).
