@@ -220,6 +220,7 @@ CA: funciona con permiso denegado (mensaje + fijar en mapa).
 labels: app | Medium | P-03, B-12
 Autocomplete con debounce y session token, lugares guardados, fijar en mapa.
 CA: una sesión de autocomplete = un cobro de Places (session token verificado). Con OSM (MVP): debounce ≥ 400 ms y mínimo 3 caracteres.
+Nota (2026-11-26): lugares guardados Casa/Trabajo en la nube quedan para un issue aparte (tabla + RLS + review de seguridad); en P-04 solo recientes en el teléfono.
 
 ### P-05 · Ofrecer tarifa y crear pedido
 labels: app | Medium | P-04, B-05, B-13
