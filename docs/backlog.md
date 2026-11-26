@@ -44,7 +44,7 @@ CA: % de puntos recibidos vs esperados por teléfono · decisión go (expo-locat
 
 ### D-01 · Archivo Figma + variables (tokens)
 labels: diseño | High | F-01
-Archivo nuevo con páginas: Portada, Tokens, Componentes, Común, Pasajero, Conductor, Admin, Prototipo. Variables de color, tipografía, radios y espaciado según `docs/arte.md`.
+Archivo nuevo con páginas: Portada, Tokens, Componentes, Común, Pasajero, Conductor, Admin, Prototipo (con Figma Starter: 3 páginas, ver `docs/decisiones.md`). Variables de color, tipografía, radios y espaciado según `docs/arte.md`.
 CA: todas las variables de `docs/arte.md` creadas · contraste AA verificado para texto sobre `danger`/`success`.
 
 ### D-02 · Librería de componentes

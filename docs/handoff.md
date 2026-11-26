@@ -5,11 +5,14 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 ## Reanudación
 - **Hito activo:** planificación del MVP → cerrada al mergear este PR. Siguiente: **M0 Fundamentos** + **M1 Diseño Figma**.
 - **Plan:** [`docs/plan-planificacion-mvp.md`](plan-planificacion-mvp.md) (aprobado por el CTO 2026-11-25).
-- **Siguiente paso concreto:** F-01 (nombre y logo con la directiva) y F-02 (aprobar costos) en paralelo con D-01 (archivo Figma + tokens). Antes de cualquier trabajo de UI se carga el skill `ui-workflow`.
+- **Siguiente paso concreto:** D-02 (librería de componentes en la página Fundamentos del Figma) sobre los tokens de D-01. Antes de cualquier trabajo de UI se carga el skill `ui-workflow` (y para Figma `figma-use` + `figma-generate-library`). En paralelo, del CTO/directiva: F-01 (nombre y logo), F-02 (costos), branch protection (Pro o público) y borrar el repo viejo.
+- **Repo:** `jencarlosmoral3-max/taxi-24-septiembre` (privado; movido desde `JoseluisLarrazabal/taxi-24-septiembre`, que sigue existiendo como `old-origin`). Para `gh`: `GH_TOKEN=$(gh auth token --user jencarlosmoral3-max) gh ...`.
+- **Figma:** [Taxi 24 — App (MVP)](https://www.figma.com/design/5qJ0oo6BIxxdfIrrZdTDEC), 3 páginas por plan Starter.
 - **Linear:** team `IND`, proyecto `P-IND-4` "App Taxi 24 de Septiembre — MVP" (8 milestones, 70 issues, 3 documentos).
 
 ## Estado
-- Repo solo con docs, sin código.
+- Repo solo con docs, sin código. Rama `chore/monorepo-ci` (F-03: monorepo pnpm + CI) en curso.
+- D-01 hecho en Figma: colecciones `Color` (12) y `Dimension` (14), 9 estilos de texto Poppins, portada y muestra de tokens. Contraste en `docs/arte.md`.
 - Docs: [arte](arte.md) · [arquitectura](arquitectura.md) · [pantallas](pantallas.md) · [backlog](backlog.md) · [decisiones](decisiones.md).
 - Council de stack: `~/.council/taxi-24-septiembre/council-20261126-015521/viewer.html` (fuera del repo; la síntesis está en `docs/arquitectura.md` y `docs/decisiones.md`).
 - Figma de referencia (solo lectura, mockups rasterizados): RideNow `p5MfDAHjxVnJ9WHjzTawgG`, Uber Free UI Kit `bqOLw7tHsh3rjvzXZRemhh`.
@@ -21,7 +24,9 @@ Ver [`docs/decisiones.md`](decisiones.md). Resumen: app independiente, Figma pri
 - Capacidad del equipo (sin fechas ni estimaciones en Linear).
 - Costos reales de OTP (WhatsApp/SMS) a Bolivia y de Google Places/Routes.
 - Codex no opinó en el council (error de la CLI): la validación del stack es de 2 de 3 voces.
-- GPS en segundo plano en Android gama baja: pendiente spike F-06.
+- GPS en segundo plano en Android gama baja: pendiente spike F-06 (requiere teléfonos reales y Supabase).
+- Branch protection: no disponible en plan Free con repo privado (403). Sin checks requeridos, cada merge pide confirmación del CTO.
+- Figma: montos usan tabular-nums en código; el estilo de Figma no fija la feature OpenType.
 
 ## Registro de planes cerrados
 - 2026-11-25 · Planificación MVP — resultado: docs + Linear cargado.
