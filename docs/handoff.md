@@ -9,7 +9,7 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
   1. Hecho: Supabase remoto con 11 migraciones verificadas por huella, Edge Function `geo` desplegada (B-12/B-13), Google (Client IDs web + Android, secret cargado por el CTO), Email apagado, Realtime solo privado.
   2. Hecho: P-02 login con Google por **OAuth web de Supabase** (PR #14). E2E en emulador 2026-11-26: login → teléfono 70000001 (guardado en `private.contact_phones`) → matar y reabrir (sesión persiste) → cerrar sesión (vuelve a login).
   3. Hecho: P-03 home con mapa (MapLibre 11.5.1 + tiles OpenFreeMap con estilo propio empaquetado `apps/mobile/assets/map/vyro-dark.json` según `arte.md`), permiso con tarjeta previa, modo "fijar en mapa" y GPS apagado. Plan y verificación en [`docs/plan-p03.md`](plan-p03.md). **Cambiar de rama a una con MapLibre exige rebuild nativo.**
-  4. Siguiente: P-04 búsqueda de destino (Photon/Nominatim vía B-12) consumiendo el punto fijado, B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
+  4. Hecho: P-04 búsqueda de destino ([`docs/plan-p04.md`](plan-p04.md)); la búsqueda usa Geoapify (PR `fix/geo-geoapify`). En curso: todas las pantallas del pasajero y del conductor, plan [`docs/plan-pantallas.md`](plan-pantallas.md). Después: B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
   4. Prueba en el Samsung J7 cuando el MVP demo esté listo.
 - **Merge:** automático con CI verde (autorizado por el CTO): esperar todos los jobs (`typecheck`, `lint`, `build-admin`, `db-test`, `deno-geo`) en success sobre el head del PR y `gh pr merge --squash --delete-branch`.
 - **Repo:** `jencarlosmoral3-max/taxi-24-septiembre` (privado). Para `gh` y `git push`: `export GH_TOKEN=$(gh auth token --user jencarlosmoral3-max)`.
@@ -27,7 +27,7 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en código), login con Google en vez de OTP, teléfono de contacto sin verificar, origen exacto para conductores, calificaciones anónimas para el calificado, Android mínimo 7.0.
 
 ## Pendiente del CTO
-- Rotar el secret de Google OAuth al finalizar el producto (decisión del CTO).
+- Rotar el secret de Google OAuth y la API key de Geoapify (pegada en el chat el 2026-11-26) al finalizar el producto (decisión del CTO).
 - Samsung J7 (Android desconocido, se asume ≥ 7.0) cuando el MVP demo esté listo, con la prueba de 2 h del GPS (go/no-go F-06).
 - Borrar el repo viejo: `gh auth refresh -h github.com -s delete_repo`.
 - Sin costos en el MVP: Supabase Free, mapas OSM, cuenta de Google Play ya existente.
@@ -37,7 +37,6 @@ Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en códi
 - Mapa: contraste al sol directo y delta de tamaño del APK release sin medir. El estilo empaquetado es una copia parcheada de OpenFreeMap `dark` (2026-11-26); si OpenFreeMap cambia el esquema de tiles, regenerarlo.
 - `BottomSheet.tsx` tiene el mismo `KeyboardAvoidingView` con `behavior` undefined en Android que tenía `/phone` (corregido en PR del fix de teclado, 2026-11-26). Corregir igual cuando una hoja con input (contraoferta, tarifa) entre en una pantalla real. Codex `verify-fix` de ese fix: no verificado (sin cuota hasta 2026-12-03).
 - Unión real a canales Realtime por websocket, push, carga (B-17).
-- `geo` desplegada: solo se verificó el 401 sin JWT; falta una llamada con JWT real (depende del login).
 - GPS en teléfonos con ahorro de batería de fabricante (solo emulador).
 - Branch protection: no disponible en plan Free con repo privado (403).
 - Codex: no se corrió en esta sesión (revisiones con Opus + /security-review).

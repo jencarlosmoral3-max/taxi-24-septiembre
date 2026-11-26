@@ -86,6 +86,8 @@ function Gate() {
       </Stack.Protected>
       <Stack.Protected guard={hasSession && hasPhone}>
         <Stack.Screen name="index" />
+        <Stack.Screen name="destino" />
+        <Stack.Screen name="fijar-destino" />
       </Stack.Protected>
       <Stack.Protected guard={__DEV__}>
         <Stack.Screen name="dev-components" />

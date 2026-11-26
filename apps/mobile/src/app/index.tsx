@@ -1,11 +1,12 @@
 import { Camera, type CameraRef, Map, Marker, type LngLat, type StyleSpecification } from '@maplibre/maplibre-react-native';
-import { Link } from 'expo-router';
+import { Link, router } from 'expo-router';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Linking, StyleSheet, View } from 'react-native';
+import { AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text } from '@/components';
+import { useTripDraft } from '@/store/tripDraft';
 import { signOut } from '@/lib/googleSignIn';
 import { theme } from '@/theme/theme';
 import vyroDark from '../../assets/map/vyro-dark.json';
@@ -25,6 +26,11 @@ export default function Index() {
   const [servicesOff, setServicesOff] = useState(false);
   const [mapKey, setMapKey] = useState(0);
   const [mapError, setMapError] = useState(false);
+  const destination = useTripDraft((s) => s.destination);
+  const setOrigin = useTripDraft((s) => s.setOrigin);
+  const lastCenter = useRef<LngLat | null>(null);
+  const lastFixKey = useRef('');
+  const setOriginAt = useCallback((lng: number, lat: number) => setOrigin({ name: 'Mi ubicación', address: '', lat, lng }), [setOrigin]);
 
   const apply = useCallback((p: Location.LocationPermissionResponse) => {
     setCanAskAgain(p.canAskAgain);
@@ -52,6 +58,11 @@ export default function Index() {
       ({ coords }) => {
         const c: LngLat = [coords.longitude, coords.latitude];
         setFix(c);
+        const k = `${c[0].toFixed(4)},${c[1].toFixed(4)}`;
+        if (k !== lastFixKey.current) {
+          lastFixKey.current = k;
+          setOriginAt(c[0], c[1]);
+        }
         if (!centered.current) {
           centered.current = true;
           camera.current?.jumpTo({ center: c, zoom: 16 });
@@ -62,11 +73,17 @@ export default function Index() {
       gone = true;
       sub?.remove();
     };
-  }, [perm, servicesOff]);
+  }, [perm, servicesOff, setOriginAt]);
 
   const request = () => Location.requestForegroundPermissionsAsync().then(apply, () => setPerm('denied'));
 
   const pinMode = perm === 'denied' || (perm === 'granted' && servicesOff);
+  useEffect(() => {
+    if (!pinMode) return;
+    lastFixKey.current = ''; // el origen pasa a ser el centro del mapa: el proximo fix GPS debe reaplicarse
+    const c = lastCenter.current ?? SANTA_CRUZ;
+    setOriginAt(c[0], c[1]);
+  }, [pinMode, setOriginAt]);
   return (
     <View style={styles.container}>
       <Map
@@ -79,6 +96,10 @@ export default function Index() {
         attributionPosition={{ top: insets.top + theme.spacing.xs, left: theme.spacing.xs }}
         onDidFinishLoadingMap={() => setMapError(false)}
         onDidFailLoadingMap={() => setMapError(true)}
+        onRegionDidChange={(e) => {
+          lastCenter.current = e.nativeEvent.center as LngLat;
+          if (pinMode) setOriginAt(e.nativeEvent.center[0], e.nativeEvent.center[1]);
+        }}
       >
         <Camera ref={camera} initialViewState={{ center: fix ?? SANTA_CRUZ, zoom: fix ? 16 : 14 }} />
         {fix && !pinMode && (
@@ -139,6 +160,31 @@ export default function Index() {
             )}
           </Card>
         ) : null}
+        {!mapError && perm !== 'ask' && (
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={destination ? `Destino: ${destination.name}. Cambiar` : '¿A dónde vas?'}
+            accessibilityHint="Abre la búsqueda de destino"
+            onPress={() => router.push('/destino')}
+            style={styles.search}
+          >
+            <View style={styles.flex}>
+              <Text variant="body16Medium" numberOfLines={1} muted={!destination}>
+                {destination ? destination.name : '¿A dónde vas?'}
+              </Text>
+              {!!destination?.address && (
+                <Text variant="body14" muted numberOfLines={1}>
+                  {destination.address}
+                </Text>
+              )}
+            </View>
+            {destination && (
+              <Text variant="body14Medium" color={theme.colors.primary}>
+                Cambiar
+              </Text>
+            )}
+          </Pressable>
+        )}
       </View>
     </View>
   );
@@ -182,6 +228,18 @@ const styles = StyleSheet.create({
   signOut: { position: 'absolute', right: theme.size.screenPadding },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: theme.size.screenPadding, gap: theme.spacing.xs },
   link: { alignSelf: 'center', paddingVertical: theme.spacing.sm, minHeight: theme.size.touchMin },
+  flex: { flex: 1 },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.sm,
+    minHeight: theme.size.ctaHeight,
+    paddingHorizontal: theme.spacing.md,
+    borderRadius: theme.radii.input,
+    backgroundColor: theme.colors.surface2,
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+  },
   card: {
     gap: theme.spacing.sm,
     padding: theme.spacing.lg,
