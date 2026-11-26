@@ -29,7 +29,7 @@ function coord(v: unknown): { lat: number; lng: number } {
 
 async function getJson(f: Fetch, url: string, timeout: number): Promise<unknown> {
   const r = await f(url, { headers: { "User-Agent": UA, Accept: "application/json" }, signal: AbortSignal.timeout(timeout) });
-  if (!r.ok) throw new Error(`upstream ${r.status}`);
+  if (!r.ok) throw new Error(`upstream ${r.status} ${(await r.text().catch(() => "")).slice(0, 200)}`);
   return await r.json();
 }
 
@@ -98,7 +98,8 @@ async function search(f: Fetch, b: Any): Promise<{ places: Place[] }> {
       const bbox = `${BBOX.minLng},${BBOX.minLat},${BBOX.maxLng},${BBOX.maxLat}`;
       const u = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${bias.lat}&lon=${bias.lng}&bbox=${bbox}&limit=6`;
       return { places: fromPhoton(await getJson(f, u, T_PHOTON)).filter((p) => inMetro(p.lat, p.lng)) };
-    } catch {
+    } catch (e) {
+      console.error("geo upstream", "search", String(e));
       throw new HttpError(502, "upstream_error");
     }
   });
@@ -110,14 +111,14 @@ async function reverse(f: Fetch, rpc: Rpc, b: Any): Promise<{ name: string; addr
     try {
       const p = fromPhoton(await getJson(f, `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}`, T_PHOTON))[0];
       if (p) return { name: p.name, address: p.address };
-    } catch { /* cae a Nominatim */ }
+    } catch (e) { console.error("geo upstream", "reverse", String(e)); /* cae a Nominatim */ }
     // Respaldo bajo compuerta global de 1 req/s; sin slot se omite.
     try {
       if (await slot(rpc, "nominatim")) {
         const j = await getJson(f, `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=jsonv2&accept-language=es`, T_NOMINATIM) as Any;
         if (j?.display_name) return { name: String(j.name || String(j.display_name).split(",")[0]), address: String(j.display_name) };
       }
-    } catch { /* 502 abajo */ }
+    } catch (e) { console.error("geo upstream", "reverse", String(e)); /* 502 abajo */ }
     throw new HttpError(502, "upstream_error");
   });
 }
@@ -140,7 +141,8 @@ async function route(f: Fetch, rpc: Rpc, b: Any) {
     try {
       const j = await getJson(f, `https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=false`, T_OSRM) as Any;
       return j?.code === "Ok" ? j.routes?.[0] : null;
-    } catch {
+    } catch (e) {
+      console.error("geo upstream", "route", String(e));
       throw new HttpError(502, "upstream_error");
     }
   }) as Any;
