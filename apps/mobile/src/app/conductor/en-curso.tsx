@@ -20,7 +20,7 @@ const PITCH = 60;
 const ZOOM = 17;
 
 const fmtKm = (km: number) => km.toFixed(1).replace('.', ',');
-const fmtDist = (m: number) => (m >= 1000 ? `${fmtKm(m / 1000)} km` : `${Math.max(10, Math.round(m / 10) * 10)} m`);
+const fmtDist = (m: number) => (m >= 1000 ? `${fmtKm(m / 1000)} km` : `${Math.max(10, Math.round(m / 10) * 10)} m`);
 
 export default function EnCurso() {
   const ok = useDriverPhaseGuard(['in_progress']);
@@ -59,7 +59,7 @@ export default function EnCurso() {
       { text: 'Enviar alerta', style: 'destructive', onPress: () => setSos(true) },
     ]);
 
-  const banner = arrived ? 'Llegaste al destino' : `${step.text} en ${fmtDist(ROUTE_CUM[step.at] - done)}`;
+  const banner = arrived ? 'Llegaste al destino' : `${step.text} en ${fmtDist(ROUTE_CUM[step.at] - done)}`;
   return (
     <MapScreen
       center={pos}
