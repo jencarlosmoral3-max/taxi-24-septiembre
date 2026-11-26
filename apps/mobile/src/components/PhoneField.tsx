@@ -9,9 +9,9 @@ import { TextField } from './TextField';
 // Movil boliviano: 8 digitos, empieza con 6 o 7. `value` son solo los 8 digitos (sin +591).
 export const isValidBoMobile = (digits: string) => /^[67]\d{7}$/.test(digits);
 
-type Props = { value: string; onChange: (digits: string) => void; error?: string; label?: string };
+type Props = { value: string; onChange: (digits: string) => void; error?: string; label?: string; onSubmit?: () => void };
 
-export function PhoneField({ value, onChange, error, label = 'Número de celular' }: Props) {
+export function PhoneField({ value, onChange, error, label = 'Número de celular', onSubmit }: Props) {
   return (
     <TextField
       label={label}
@@ -22,6 +22,8 @@ export function PhoneField({ value, onChange, error, label = 'Número de celular
       autoComplete="tel-national"
       textContentType="telephoneNumber"
       error={error}
+      returnKeyType="done"
+      onSubmitEditing={onSubmit}
       prefix={
         <View style={styles.prefix} accessible accessibilityLabel="más 591">
           <Text variant="body16Medium">+591</Text>
