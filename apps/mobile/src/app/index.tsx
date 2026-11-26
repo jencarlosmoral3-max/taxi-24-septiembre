@@ -32,6 +32,7 @@ function PassengerHome() {
   const [servicesOff, setServicesOff] = useState(false);
   const [noFix, setNoFix] = useState(false);
   const noFixRef = useRef(false);
+  const dragged = useRef(false); // el usuario ya movio el pin en modo sin-fix
   const [mapKey, setMapKey] = useState(0);
   const [mapError, setMapError] = useState(false);
   const destination = useTripDraft((s) => s.destination);
@@ -67,7 +68,11 @@ function PassengerHome() {
       ({ coords }) => {
         const c: LngLat = [coords.longitude, coords.latitude];
         setFix(c);
-        if (noFixRef.current) return; // el usuario ya fija el punto a mano: no saltar
+        if (noFixRef.current) {
+          if (dragged.current) return; // el usuario ya fija el punto a mano: no saltar
+          noFixRef.current = false; // fix tardio sin intervencion del usuario: volver a la ubicacion real
+          setNoFix(false);
+        }
         const k = `${c[0].toFixed(4)},${c[1].toFixed(4)}`;
         if (k !== lastFixKey.current) {
           lastFixKey.current = k;
@@ -125,6 +130,7 @@ function PassengerHome() {
         onDidFailLoadingMap={() => setMapError(true)}
         onRegionDidChange={(e) => {
           lastCenter.current = e.nativeEvent.center as LngLat;
+          if (noFixRef.current && e.nativeEvent.userInteraction) dragged.current = true;
           if (pinMode) setOriginAt(e.nativeEvent.center[0], e.nativeEvent.center[1]);
         }}
       >

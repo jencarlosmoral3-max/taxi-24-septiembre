@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text, TextField } from '@/components';
 import { geoSearch, httpStatus } from '@/lib/geo';
-import { useTripDraft, type Place } from '@/store/tripDraft';
+import { SAVED_KINDS, SAVED_LABEL, useTripDraft, type Place } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
 
 export default function Destino() {
@@ -89,9 +89,9 @@ export default function Destino() {
         ListHeaderComponent={
           enabled ? undefined : (
             <View>
-              {(['home', 'work'] as const).map((k) => {
+              {SAVED_KINDS.map((k) => {
                 const p = saved[k];
-                const label = k === 'home' ? 'Casa' : 'Trabajo';
+                const label = SAVED_LABEL[k];
                 return (
                   <View key={k} style={styles.savedRow}>
                     <Pressable

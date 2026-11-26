@@ -5,6 +5,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 export type Place = { name: string; address: string; lat: number; lng: number };
 
 export type SavedKind = 'home' | 'work';
+export const SAVED_KINDS: SavedKind[] = ['home', 'work'];
+export const SAVED_LABEL: Record<SavedKind, string> = { home: 'Casa', work: 'Trabajo' };
 
 const MAX_RECENTS = 5;
 const key = (p: Place) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;

@@ -6,7 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text, VyroMap } from '@/components';
 import { geoReverse, SERVICE_BBOX } from '@/lib/geo';
-import { useTripDraft, type SavedKind } from '@/store/tripDraft';
+import { useTripDraft, type SavedKind, SAVED_LABEL } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
 
 const SANTA_CRUZ: LngLat = [-63.1821, -17.7833];
@@ -20,7 +20,7 @@ export default function FijarDestino() {
   // ?guardar=home|work: modo "guardar lugar" (no cambia el destino, vuelve a la busqueda).
   const { guardar } = useLocalSearchParams<{ guardar?: SavedKind }>();
   const saveKind = guardar === 'home' || guardar === 'work' ? guardar : null;
-  const saveLabel = saveKind === 'home' ? 'casa' : 'trabajo';
+  const saveLabel = saveKind ? SAVED_LABEL[saveKind].toLowerCase() : '';
   const [start] = useState<LngLat>(origin ? [origin.lng, origin.lat] : SANTA_CRUZ);
   const center = useRef<LngLat | null>(null);
   const [busy, setBusy] = useState(false);
@@ -45,7 +45,7 @@ export default function FijarDestino() {
       // Sin nombre: se usa el punto con coordenadas.
     }
     if (saveKind) {
-      savePlace(saveKind, { name: saveKind === 'home' ? 'Casa' : 'Trabajo', address, lat, lng });
+      savePlace(saveKind, { name: SAVED_LABEL[saveKind], address, lat, lng });
       router.back();
       return;
     }
