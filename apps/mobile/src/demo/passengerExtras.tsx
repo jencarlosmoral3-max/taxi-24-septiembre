@@ -15,8 +15,8 @@ import { useDemoRide, type RideStatus } from './useDemoRide';
 
 export const MIN_FARE_CENTS = 1000; // minimo del sindicato (app_config)
 
-// Si no hay origen en el borrador (p. ej. recarga de la app), las pantallas del viaje usan el centro de Cochabamba en vez de quedar en blanco.
-const FALLBACK_ORIGIN: Place = { name: 'Mi ubicación', address: 'Cochabamba', lat: -17.3935, lng: -66.157 };
+// Si no hay origen en el borrador (p. ej. recarga de la app), las pantallas del viaje usan el centro de Santa Cruz de la Sierra en vez de quedar en blanco.
+const FALLBACK_ORIGIN: Place = { name: 'Mi ubicación', address: 'Santa Cruz de la Sierra', lat: -17.7833, lng: -63.1821 };
 export const useRideOrigin = (): Place => useTripDraft((s) => s.origin) ?? FALLBACK_ORIGIN;
 
 // Distancia en linea recta (haversine), km.
