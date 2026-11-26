@@ -11,123 +11,154 @@ language sql stable set search_path = '' as $$
   select coalesce((auth.jwt() -> 'app_metadata' ->> 'role') = 'admin', false)
 $$;
 
--- Helpers de relación: security definer para no recursar en RLS de rides/ride_offers.
-create function private.is_ride_passenger(p_ride_id uuid) returns boolean
+-- Helpers de relación: conjuntos (setof uuid) evaluados UNA vez por consulta con `x in (select private.f())`.
+-- security definer para no recursar en las políticas de rides/ride_offers; auth.uid() siempre envuelto en (select ...).
+create function private.my_party_ride_ids() returns setof uuid
 language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.rides r where r.id = p_ride_id and r.passenger_id = auth.uid())
+  select r.id from public.rides r where r.passenger_id = (select auth.uid()) or r.driver_id = (select auth.uid())
 $$;
 
-create function private.is_ride_party(p_ride_id uuid) returns boolean
+create function private.my_passenger_ride_ids() returns setof uuid
 language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.rides r where r.id = p_ride_id
-    and (r.passenger_id = auth.uid() or r.driver_id = auth.uid()))
+  select r.id from public.rides r where r.passenger_id = (select auth.uid())
 $$;
 
-create function private.has_offered_on(p_ride_id uuid) returns boolean
+-- Pedidos abiertos donde el conductor tiene oferta viva (active/expired; una rechazada/retirada ya no da acceso).
+create function private.my_bidding_ride_ids() returns setof uuid
 language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.ride_offers o where o.ride_id = p_ride_id and o.driver_id = auth.uid())
+  select o.ride_id from public.ride_offers o join public.rides r on r.id = o.ride_id
+  where o.driver_id = (select auth.uid()) and r.status = 'requested' and o.status in ('active', 'expired')
 $$;
 
--- Contraparte: pasajero y conductor asignado de un mismo ride (cualquier estado, para el historial), o relación de puja
--- (uno ofertó sobre el pedido del otro) solo mientras ese pedido sigue en 'requested'.
-create function private.is_counterpart(p_profile_id uuid) returns boolean
+-- Contraparte: pasajero y conductor asignado de un mismo ride (cualquier estado, historial), o relación de puja
+-- (oferta active/expired) solo mientras el pedido sigue en 'requested'.
+create function private.counterpart_ids() returns setof uuid
 language sql stable security definer set search_path = '' as $$
-  select exists (
-    select 1 from public.rides r
-    where (r.passenger_id = auth.uid() and r.driver_id = p_profile_id)
-       or (r.passenger_id = p_profile_id and r.driver_id = auth.uid())
-       or (r.status = 'requested' and (
-            (r.passenger_id = auth.uid() and exists (select 1 from public.ride_offers o where o.ride_id = r.id and o.driver_id = p_profile_id))
-         or (r.passenger_id = p_profile_id and exists (select 1 from public.ride_offers o where o.ride_id = r.id and o.driver_id = auth.uid()))))
-  )
+  select r.driver_id from public.rides r where r.passenger_id = (select auth.uid()) and r.driver_id is not null
+  union
+  select r.passenger_id from public.rides r where r.driver_id = (select auth.uid())
+  union
+  select o.driver_id from public.ride_offers o join public.rides r on r.id = o.ride_id
+    where r.passenger_id = (select auth.uid()) and r.status = 'requested' and o.status in ('active', 'expired')
+  union
+  select r.passenger_id from public.rides r where r.id in (select private.my_bidding_ride_ids())
 $$;
 
-create function private.is_driver() returns boolean
+create function private.vehicle_in_use(p_vehicle_id uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
-  select exists (select 1 from public.drivers d where d.profile_id = auth.uid() and d.status = 'approved')
+  select exists (select 1 from public.rides r where r.vehicle_id = p_vehicle_id)
 $$;
 
-grant execute on function private.is_admin(), private.is_ride_passenger(uuid), private.is_ride_party(uuid),
-  private.has_offered_on(uuid), private.is_counterpart(uuid), private.is_driver() to authenticated;
+-- definer: contar vehículos desde la política de vehicles sin recursión de RLS.
+create function private.my_vehicle_count() returns bigint
+language sql stable security definer set search_path = '' as $$
+  select count(*) from public.vehicles v where v.driver_id = (select auth.uid())
+$$;
+
+grant execute on function private.my_vehicle_count(), private.is_admin(), private.my_party_ride_ids(), private.my_passenger_ride_ids(),
+  private.my_bidding_ride_ids(), private.counterpart_ids(), private.vehicle_in_use(uuid) to authenticated;
 
 -- profiles (push_token y updated_at/deleted_at fuera del select; rating_* solo lectura)
 grant select (id, full_name, avatar_path, rating_avg, rating_count, created_at) on public.profiles to authenticated;
 grant update (full_name, avatar_path, push_token) on public.profiles to authenticated;
 create policy profiles_select on public.profiles for select to authenticated
-  using (id = auth.uid() or private.is_counterpart(id) or private.is_admin());
+  using (id = (select auth.uid()) or id in (select private.counterpart_ids()) or (select private.is_admin()));
 create policy profiles_update on public.profiles for update to authenticated
-  using (id = auth.uid()) with check (id = auth.uid());
+  using (id = (select auth.uid())) with check (id = (select auth.uid()));
 
--- drivers (status/approved_at/rejected_reason no escribibles; license/ci no legibles)
-grant select (profile_id, status, union_member_number, approved_at, rejected_reason, created_at) on public.drivers to authenticated;
+-- drivers: status/approved_at/rejected_reason no escribibles; license/ci/rejected_reason no legibles por API
+-- (el dueño lee su motivo de rechazo con get_my_driver_application()).
+-- Altera B-01: el número de socio deja de ser único global (permitía "squatting" de un número ajeno en pending);
+-- ahora es único solo entre conductores aprobados.
+alter table public.drivers drop constraint drivers_union_member_number_key;
+create unique index drivers_union_member_number_approved on public.drivers (union_member_number) where status = 'approved';
+
+grant select (profile_id, status, union_member_number, approved_at, created_at) on public.drivers to authenticated;
 grant insert (profile_id, union_member_number, license_number, ci_number) on public.drivers to authenticated;
 grant update (union_member_number, license_number, ci_number) on public.drivers to authenticated;
 create policy drivers_select on public.drivers for select to authenticated
-  using (profile_id = auth.uid() or private.is_counterpart(profile_id) or private.is_admin());
+  using (profile_id = (select auth.uid()) or profile_id in (select private.counterpart_ids()) or (select private.is_admin()));
 create policy drivers_insert on public.drivers for insert to authenticated
-  with check (profile_id = auth.uid());
+  with check (profile_id = (select auth.uid()));
 create policy drivers_update on public.drivers for update to authenticated
-  using (profile_id = auth.uid() and status in ('pending', 'rejected'))
-  with check (profile_id = auth.uid());
+  using (profile_id = (select auth.uid()) and status in ('pending', 'rejected'))
+  with check (profile_id = (select auth.uid()));
 
--- vehicles (ruat/soat_expires_at no legibles por API: se exponen luego por RPC o service role)
+create function public.get_my_driver_application()
+returns table (status public.driver_status, rejected_reason text, approved_at timestamptz, union_member_number text)
+language sql stable security definer set search_path = '' as $$
+  select d.status, d.rejected_reason, d.approved_at, d.union_member_number
+  from public.drivers d where d.profile_id = (select auth.uid())
+$$;
+revoke all on function public.get_my_driver_application() from public, anon;
+grant execute on function public.get_my_driver_application() to authenticated;
+
+-- vehicles (ruat/soat_expires_at no legibles por API: se exponen luego por RPC o service role).
+-- Tope de 2 vehículos por conductor; la placa sigue siendo única (el squatting queda acotado a 2: el arreglo real es la revisión admin).
 grant select (id, driver_id, plate, brand, model, color, year) on public.vehicles to authenticated;
 grant insert (driver_id, plate, brand, model, color, year, ruat, soat_expires_at) on public.vehicles to authenticated;
 grant update (plate, brand, model, color, year, ruat, soat_expires_at) on public.vehicles to authenticated;
 create policy vehicles_select on public.vehicles for select to authenticated
-  using (driver_id = auth.uid() or private.is_counterpart(driver_id) or private.is_admin());
+  using (driver_id = (select auth.uid()) or driver_id in (select private.counterpart_ids()) or (select private.is_admin()));
 create policy vehicles_insert on public.vehicles for insert to authenticated
-  with check (driver_id = auth.uid()
-    and exists (select 1 from public.drivers d where d.profile_id = auth.uid() and d.status in ('pending', 'rejected')));
+  with check (driver_id = (select auth.uid())
+    and exists (select 1 from public.drivers d where d.profile_id = (select auth.uid()) and d.status in ('pending', 'rejected'))
+    and (select private.my_vehicle_count()) < 2);
 create policy vehicles_update on public.vehicles for update to authenticated
-  using (driver_id = auth.uid()
-    and exists (select 1 from public.drivers d where d.profile_id = auth.uid() and d.status in ('pending', 'rejected')))
-  with check (driver_id = auth.uid());
+  using (driver_id = (select auth.uid())
+    and exists (select 1 from public.drivers d where d.profile_id = (select auth.uid()) and d.status in ('pending', 'rejected'))
+    and not private.vehicle_in_use(id))
+  with check (driver_id = (select auth.uid()));
 
--- driver_documents
+-- driver_documents (reviewed_by/reviewed_at fuera del select)
 grant select (id, driver_id, type, status, reason, created_at, storage_path) on public.driver_documents to authenticated;
 grant insert (driver_id, type, storage_path) on public.driver_documents to authenticated;
 create policy driver_documents_select on public.driver_documents for select to authenticated
-  using (driver_id = auth.uid() or private.is_admin());
+  using (driver_id = (select auth.uid()) or (select private.is_admin()));
 create policy driver_documents_insert on public.driver_documents for insert to authenticated
-  with check (driver_id = auth.uid() and storage_path like auth.uid()::text || '/%');
+  with check (driver_id = (select auth.uid())
+    and storage_path ~ ('^' || (select auth.uid())::text || '/[A-Za-z0-9_-]+\.(jpg|jpeg|png|pdf)$'));
 
 -- driver_locations: lectura solo dueño/admin; escritura por RPC (B-10)
 grant select (driver_id, location, heading, is_online, updated_at) on public.driver_locations to authenticated;
 create policy driver_locations_select on public.driver_locations for select to authenticated
-  using (driver_id = auth.uid() or private.is_admin());
+  using (driver_id = (select auth.uid()) or (select private.is_admin()));
 
--- rides / ride_offers / ride_track_points / ratings / sos_events: solo lectura; escritura por RPC
-grant select on public.rides to authenticated;
+-- rides / ride_offers / ride_track_points / ratings / sos_events: solo lectura (columnas explícitas); escritura por RPC
+grant select (id, passenger_id, driver_id, vehicle_id, accepted_offer_id, origin, destination, origin_text, destination_text,
+  offered_fare_cents, final_fare_cents, passenger_count, comment, status, expires_at, assigned_at, driver_arrived_at,
+  started_at, completed_at, cancelled_at, cancel_reason, created_at) on public.rides to authenticated;
 create policy rides_select on public.rides for select to authenticated
-  using (passenger_id = auth.uid() or driver_id = auth.uid() or (private.has_offered_on(id) and status = 'requested') or private.is_admin());
+  using (passenger_id = (select auth.uid()) or driver_id = (select auth.uid())
+    or id in (select private.my_bidding_ride_ids()) or (select private.is_admin()));
 
-grant select on public.ride_offers to authenticated;
+grant select (id, ride_id, driver_id, price_cents, status, expires_at, created_at) on public.ride_offers to authenticated;
 create policy ride_offers_select on public.ride_offers for select to authenticated
-  using (driver_id = auth.uid() or private.is_ride_passenger(ride_id) or private.is_admin());
+  using (driver_id = (select auth.uid()) or ride_id in (select private.my_passenger_ride_ids()) or (select private.is_admin()));
 
-grant select on public.ride_track_points to authenticated;
+grant select (ride_id, recorded_at, location) on public.ride_track_points to authenticated;
 create policy ride_track_points_select on public.ride_track_points for select to authenticated
-  using (private.is_ride_party(ride_id) or private.is_admin());
+  using (ride_id in (select private.my_party_ride_ids()) or (select private.is_admin()));
 
 grant select (id, ride_id, stars, comment, created_at, rater_id, ratee_id) on public.ratings to authenticated;
 create policy ratings_select on public.ratings for select to authenticated
-  using (rater_id = auth.uid() or ratee_id = auth.uid() or private.is_admin());
+  using (rater_id = (select auth.uid()) or ratee_id = (select auth.uid()) or (select private.is_admin()));
 
-grant select on public.sos_events to authenticated;
+grant select (id, ride_id, user_id, location, created_at, handled_at) on public.sos_events to authenticated; -- sin handled_by
 create policy sos_events_select on public.sos_events for select to authenticated
-  using (user_id = auth.uid() or private.is_admin());
+  using (user_id = (select auth.uid()) or (select private.is_admin()));
 
 -- app_config: lectura para todos los autenticados, escritura solo admin con auditoría
-grant select on public.app_config to authenticated;
+grant select (id, min_fare_cents, search_radius_m, offer_ttl_s, ride_ttl_s, base_cents, per_km_cents, per_min_cents, updated_at)
+  on public.app_config to authenticated;
 grant update (min_fare_cents, search_radius_m, offer_ttl_s, ride_ttl_s, base_cents, per_km_cents, per_min_cents)
   on public.app_config to authenticated;
 create policy app_config_select on public.app_config for select to authenticated using (true);
 create policy app_config_update on public.app_config for update to authenticated
-  using (private.is_admin()) with check (private.is_admin());
+  using ((select private.is_admin())) with check ((select private.is_admin()));
 
-grant select on public.config_audit to authenticated;
-create policy config_audit_select on public.config_audit for select to authenticated using (private.is_admin());
+grant select (id, changed_by, changed_at, old, new) on public.config_audit to authenticated;
+create policy config_audit_select on public.config_audit for select to authenticated using ((select private.is_admin()));
 
 create function private.audit_app_config() returns trigger
 language plpgsql security definer set search_path = '' as $$

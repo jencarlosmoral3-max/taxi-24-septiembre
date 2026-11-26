@@ -311,7 +311,12 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            "get_ride_contact":
+            "get_my_driver_application":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "approved_at": string,"rejected_reason": string,"status": Database["public"]['Enums']["driver_status"],"union_member_number": string
+            }[]
+                           },
+"get_ride_contact":
 { Args: { "p_ride_id": string }; Returns: {
               "full_name": string,"phone": string
             }[]

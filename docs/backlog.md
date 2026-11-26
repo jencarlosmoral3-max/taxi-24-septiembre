@@ -250,6 +250,7 @@ CA: reanuda si se cierra la app a mitad · fotos < 1 MB.
 
 ### C-02 · Estado pendiente de aprobación y switch de modo
 labels: app | Medium | C-01
+Nota (review B-02): los inserts/updates desde el cliente deben pedir columnas explícitas (`.select('id,status,...')`); sin lista, PostgREST pide todas y falla con 42501 por las columnas no concedidas (`push_token`, `ci_number`, `license_number`). El motivo de rechazo se lee con `get_my_driver_application()`.
 CA: modo conductor bloqueado hasta `approved` · notificación al ser aprobado/rechazado.
 
 ### C-03 · En línea / fuera de línea + tracking en segundo plano
@@ -282,6 +283,7 @@ CA: totales de hoy/semana coinciden con viajes `completed`.
 ### A-01 · Setup Next.js + auth admin
 labels: web | Medium | F-03, B-03, D-08
 Next.js App Router en Vercel, login con Supabase, solo claim `admin`.
+Nota (review B-02): exigir MFA para admin (`auth.jwt() ->> 'aal' = 'aal2'` en `private.is_admin()`) y JWT corto: quitar el rol admin tarda hasta que vence el token (`jwt_expiry` 3600).
 CA: usuario sin claim recibe 403.
 
 ### A-02 · Aprobación de conductores
