@@ -111,12 +111,14 @@ CA: RLS activado en 100% de tablas · tests pgTAP de acceso cruzado (pasajero A 
 labels: backend, seguridad | High | B-01, F-05
 Supabase Auth phone con Twilio Verify: **WhatsApp como canal primario, SMS como respaldo** (costo y entregabilidad en Entel/Tigo/Viva). Trigger que crea `profiles`. Rate limit de OTP. Claim `role` para admin.
 Nota (B-02): `profiles` no tiene grant de insert; el trigger sobre `auth.users` crea el perfil de **todo** usuario, admins incluidos (`config_audit.changed_by` referencia `profiles`).
+Nota (review B-03): al conectar el proyecto remoto, el rate limit real es `max_frequency`, captcha, Fraud Guard de Twilio Verify con geo-permisos solo BO y límites por IP; `sms_sent` es global por proyecto. Con Twilio Verify, largo y vigencia del OTP se fijan en el servicio de Twilio. `signInWithOtp` crea el usuario (y su perfil) antes de verificar: limpiar perfiles de números nunca verificados.
 CA: login completo con número +591 real por WhatsApp y por SMS · rate limit verificado · admin solo por claim asignado manualmente.
 
 ### B-04 · Storage de documentos de conductor
 labels: backend, seguridad | High | B-02
 Bucket privado `driver-docs`; solo dueño escribe/lee lo suyo; admin lee todo. URLs firmadas de corta duración.
 Nota (B-02): las políticas del bucket replican la regla de la tabla: el path empieza con `<auth.uid()>/`. Reemplazar un documento rechazado requiere RPC (no hay grant de update/delete en `driver_documents`).
+Nota (review B-04): las pruebas pgTAP cubren las políticas, no la Storage API. Falta smoke con supabase-js en stack completo (upload, upsert rechazado, signed URL ajena rechazada, `list` solo propio, MIME `text/html` rechazado).
 CA: test: otro conductor no puede leer documentos ajenos.
 
 ### B-05 · RPC `create_ride` + búsqueda de conductores cercanos
@@ -291,6 +293,7 @@ CA: usuario sin claim recibe 403.
 labels: web | Medium | A-01, B-04
 Ver documentos (URLs firmadas), aprobar/rechazar con motivo.
 Nota (B-02): aprobar/rechazar va por RPC de admin (no hay grant de update sobre `drivers.status`). Al aprobar, limpiar `rejected_reason`.
+Nota (review B-04): el panel pide URLs firmadas de ≤ 60 s para ver documentos.
 CA: cambio de estado notifica al conductor.
 
 ### A-03 · Padrón de conductores y vehículos

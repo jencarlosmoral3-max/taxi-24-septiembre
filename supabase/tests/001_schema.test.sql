@@ -42,7 +42,8 @@ insert into public.profiles (id, full_name) values
   ('00000000-0000-0000-0000-0000000000a2', 'P2'),
   ('00000000-0000-0000-0000-0000000000a3', 'P3'),
   ('00000000-0000-0000-0000-0000000000a4', 'P4'),
-  ('00000000-0000-0000-0000-0000000000d1', 'D1');
+  ('00000000-0000-0000-0000-0000000000d1', 'D1')
+  on conflict (id) do update set full_name = excluded.full_name;
 insert into public.drivers (profile_id, status) values ('00000000-0000-0000-0000-0000000000d1', 'approved');
 insert into public.vehicles (id, driver_id, plate) values
   ('00000000-0000-0000-0000-0000000000e1', '00000000-0000-0000-0000-0000000000d1', '1234ABC');
