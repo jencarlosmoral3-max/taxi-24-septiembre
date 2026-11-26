@@ -23,9 +23,8 @@ export function useDriverPhaseGuard(accepted: DriverPhase[]): boolean {
   useFocusEffect(
     useCallback(() => {
       if (ok) return;
-      // idle: volver al home ya existente en la pila en vez de duplicarlo.
-      if (phase === 'idle') router.dismissTo(ROUTE.idle);
-      else router.replace(ROUTE[phase]);
+      // Siempre replace: las transiciones anteriores reemplazaron el home, asi que la pila termina con un solo home.
+      router.replace(ROUTE[phase]);
     }, [ok, phase]),
   );
   return ok;

@@ -68,7 +68,7 @@ export const useDemoDriver = create<State>((set, get) => {
       clear();
       set({ phase: 'waiting', offeredCents: cents });
       timer = setTimeout(() => {
-        if (get().phase === 'waiting' && get().online) set({ phase: 'assigned' });
+        if (get().phase === 'waiting') set({ phase: 'assigned' });
       }, PASSENGER_ACCEPTS_MS);
     },
     arrived: () => get().phase === 'assigned' && set({ phase: 'driver_arrived' }),
