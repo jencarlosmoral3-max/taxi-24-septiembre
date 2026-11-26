@@ -5,6 +5,7 @@
   "scripts": {
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
-    "build": "pnpm -r --if-present build"
+    "build": "pnpm -r --if-present build",
+    "db:types": "npx supabase@3.4.0 gen types typescript --local > packages/db-types/src/database.ts"
   }
 }
