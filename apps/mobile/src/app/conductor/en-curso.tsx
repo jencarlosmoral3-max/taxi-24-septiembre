@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Camera, Marker } from '@maplibre/maplibre-react-native';
+import { Camera, Marker, type CameraRef } from '@maplibre/maplibre-react-native';
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, StyleSheet, useWindowDimensions, View } from 'react-native';
 
 import { Button, Text } from '@/components';
@@ -16,7 +16,7 @@ const TRIP_MS = 75000; // demo: todo el recorrido dura ~75 s
 const TICK_MS = 1000;
 const STEP_M = (ROUTE_METERS * TICK_MS) / TRIP_MS;
 const SPEED_M_MIN = 500; // ~30 km/h, para estimar los minutos restantes
-const PITCH = 55;
+const PITCH = 60;
 const ZOOM = 17;
 
 const fmtKm = (km: number) => km.toFixed(1).replace('.', ',');
@@ -31,6 +31,7 @@ export default function EnCurso() {
   const [eta] = useState(() => new Date(Date.now() + Math.ceil(ROUTE_METERS / SPEED_M_MIN) * 60000).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }));
   const reduce = useReduceMotion();
   const { height } = useWindowDimensions();
+  const cam = useRef<CameraRef>(null);
   useBackConfirm('Viaje en curso', 'Cuando llegues al destino, toca "Finalizar viaje".');
 
   // El taxi avanza solo mientras la pantalla esta enfocada; se limpia al salir o desmontar.
@@ -40,10 +41,14 @@ export default function EnCurso() {
       return () => clearInterval(id);
     }, []),
   );
+  const { pos, bearing, next } = pointAt(done);
+  // El pitch/rumbo se aplican con la ref (easeTo): las props declarativas de Camera no inclinaron el mapa en pruebas.
+  useEffect(() => {
+    cam.current?.easeTo({ center: pos, zoom: ZOOM, pitch: PITCH, bearing, padding: { bottom: height * 0.3 }, duration: reduce ? 0 : TICK_MS, easing: 'linear' });
+  }, [pos, bearing, reduce, height]);
   if (!ok || !request) return null;
 
   const { dropoff } = request;
-  const { pos, bearing, next } = pointAt(done);
   const arrived = done >= ROUTE_METERS;
   const step = DEMO_MANEUVERS.find((m) => ROUTE_CUM[m.at] > done) ?? DEMO_MANEUVERS[DEMO_MANEUVERS.length - 1];
   const leftM = ROUTE_METERS - done;
@@ -63,13 +68,8 @@ export default function EnCurso() {
       route={[pos, ...DEMO_ROUTE.slice(next)]}
       camera={
         <Camera
-          center={pos}
-          zoom={ZOOM}
-          pitch={PITCH}
-          bearing={bearing}
-          padding={{ bottom: height * 0.3 }}
-          duration={reduce ? 0 : TICK_MS}
-          easing="linear"
+          ref={cam}
+          initialViewState={{ center: pos, zoom: ZOOM, pitch: PITCH, bearing, padding: { bottom: height * 0.3 } }}
         />
       }
       mapChildren={
