@@ -1,4 +1,4 @@
-import { Camera, type CameraRef, Map, Marker, type LngLat } from '@maplibre/maplibre-react-native';
+import { Camera, type CameraRef, Map, Marker, type LngLat, type StyleSpecification } from '@maplibre/maplibre-react-native';
 import { Link } from 'expo-router';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -8,9 +8,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, Text } from '@/components';
 import { signOut } from '@/lib/googleSignIn';
 import { theme } from '@/theme/theme';
+import vyroDark from '../../assets/map/vyro-dark.json';
 
 const SANTA_CRUZ: LngLat = [-63.1821, -17.7833];
-const STYLE_URL = 'https://tiles.openfreemap.org/styles/dark';
 
 type Perm = 'loading' | 'ask' | 'granted' | 'denied';
 
@@ -72,7 +72,7 @@ export default function Index() {
       <Map
         key={mapKey}
         style={styles.map}
-        mapStyle={STYLE_URL}
+        mapStyle={vyroDark as StyleSpecification}
         touchPitch={false}
         compass={false}
         logo={false}
@@ -81,14 +81,14 @@ export default function Index() {
         onDidFailLoadingMap={() => setMapError(true)}
       >
         <Camera ref={camera} initialViewState={{ center: fix ?? SANTA_CRUZ, zoom: fix ? 16 : 14 }} />
-        {fix && (
+        {fix && !pinMode && (
           <Marker lngLat={fix}>
-            <View style={styles.dot} />
+            <View style={styles.dot} accessibilityLabel="Tu ubicación" />
           </Marker>
         )}
       </Map>
 
-      {pinMode && <View pointerEvents="none" style={styles.pin} />}
+      {pinMode && <View accessible accessibilityLabel="Punto de recogida en el centro del mapa" pointerEvents="none" style={styles.pin} />}
 
       <View style={[styles.signOut, { top: insets.top + theme.spacing.xs }]}>
         <Button label="Cerrar sesión" variant="secondary" onPress={() => signOut()} />
@@ -177,7 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radii.pill,
     backgroundColor: theme.colors.primary,
     borderWidth: 3,
-    borderColor: theme.colors.onPrimary,
+    borderColor: theme.colors.text,
   },
   signOut: { position: 'absolute', right: theme.size.screenPadding },
   bottom: { position: 'absolute', left: 0, right: 0, bottom: 0, paddingHorizontal: theme.size.screenPadding, gap: theme.spacing.xs },
