@@ -1,21 +1,26 @@
-import { Camera, type CameraRef, Map, Marker, type LngLat, type StyleSpecification } from '@maplibre/maplibre-react-native';
-import { Link, router } from 'expo-router';
+import { Camera, type CameraRef, Marker, type LngLat } from '@maplibre/maplibre-react-native';
+import { Link, Redirect, router } from 'expo-router';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Button, Text } from '@/components';
+import { Button, Text, VyroMap } from '@/components';
 import { useTripDraft } from '@/store/tripDraft';
-import { signOut } from '@/lib/googleSignIn';
+import { useAppMode } from '@/store/appMode';
 import { theme } from '@/theme/theme';
-import vyroDark from '../../assets/map/vyro-dark.json';
 
 const SANTA_CRUZ: LngLat = [-63.1821, -17.7833];
 
 type Perm = 'loading' | 'ask' | 'granted' | 'denied';
 
 export default function Index() {
+  const mode = useAppMode((s) => s.mode);
+  if (mode === 'driver') return <Redirect href="/conductor" />;
+  return <PassengerHome />;
+}
+
+function PassengerHome() {
   const insets = useSafeAreaInsets();
   const camera = useRef<CameraRef>(null);
   const centered = useRef(false);
@@ -27,6 +32,7 @@ export default function Index() {
   const [mapKey, setMapKey] = useState(0);
   const [mapError, setMapError] = useState(false);
   const destination = useTripDraft((s) => s.destination);
+  const origin = useTripDraft((s) => s.origin);
   const setOrigin = useTripDraft((s) => s.setOrigin);
   const lastCenter = useRef<LngLat | null>(null);
   const lastFixKey = useRef('');
@@ -86,14 +92,9 @@ export default function Index() {
   }, [pinMode, setOriginAt]);
   return (
     <View style={styles.container}>
-      <Map
+      <VyroMap
         key={mapKey}
         style={styles.map}
-        mapStyle={vyroDark as StyleSpecification}
-        touchPitch={false}
-        compass={false}
-        logo={false}
-        attributionPosition={{ top: insets.top + theme.spacing.xs, left: theme.spacing.xs }}
         onDidFinishLoadingMap={() => setMapError(false)}
         onDidFailLoadingMap={() => setMapError(true)}
         onRegionDidChange={(e) => {
@@ -107,12 +108,12 @@ export default function Index() {
             <View style={styles.dot} accessibilityLabel="Tu ubicación" />
           </Marker>
         )}
-      </Map>
+      </VyroMap>
 
       {pinMode && <View accessible accessibilityLabel="Punto de recogida en el centro del mapa" pointerEvents="none" style={styles.pin} />}
 
       <View style={[styles.signOut, { top: insets.top + theme.spacing.xs }]}>
-        <Button label="Cerrar sesión" variant="secondary" onPress={() => signOut()} />
+        <Button label="Perfil" variant="secondary" onPress={() => router.push('/perfil')} />
       </View>
 
       <View style={[styles.bottom, { paddingBottom: insets.bottom + theme.spacing.md }]}>
@@ -185,6 +186,7 @@ export default function Index() {
             )}
           </Pressable>
         )}
+        {origin && destination && !mapError && perm !== 'ask' && <Button label="Continuar" onPress={() => router.push('/viaje/tarifa')} />}
       </View>
     </View>
   );

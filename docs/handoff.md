@@ -23,6 +23,8 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 - **Supabase:** proyecto remoto `mrhwceepvcjcdntvnsgs` (plan Free, cuenta nueva del CTO) con las 11 migraciones aplicadas y verificadas por huella y la Edge Function `geo` (`verify_jwt` activo) desplegada. Plan Free pausa tras ~7 días sin uso: abrirlo antes de cada demo. Local: `supabase/.env` (ignorado por git) con las credenciales OAuth de Google.
 - **Docs:** [arte](arte.md) · [arquitectura](arquitectura.md) · [pantallas](pantallas.md) · [backlog](backlog.md) · [decisiones](decisiones.md) · [runbook admin](runbook-admin.md) · [spike GPS](spike-gps.md).
 
+- **Pantallas fase 1** ([`plan-pantallas.md`](plan-pantallas.md)): PR de la base (datos demo en `src/demo/`, `VyroMap`, rutas y guards por modo, modo persistido, splash con timeout de hidratación, cierre de sesión que resetea modo y demo). Después: PRs de pasajero, conductor, comunes, extras (registro, permiso de ubicación, lugares guardados) y panel admin, todos con datos de ejemplo.
+
 ## Decisiones
 Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en código), login con Google en vez de OTP, teléfono de contacto sin verificar, origen exacto para conductores, calificaciones anónimas para el calificado, Android mínimo 7.0.
 
