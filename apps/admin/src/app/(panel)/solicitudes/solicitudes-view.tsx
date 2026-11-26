@@ -120,14 +120,10 @@ export function SolicitudesView() {
               <ul className="grid grid-cols-2 gap-3 md:grid-cols-3">
                 {DOC_KINDS.map((d) => (
                   <li key={d}>
-                    <button
-                      type="button"
-                      className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 rounded-input border border-dashed border-border bg-surface-2 text-sm text-text-muted hover:border-text-muted hover:text-text"
-                      aria-label={`Ver ${d} (vista previa de ejemplo)`}
-                    >
+                    <div className="flex aspect-[4/3] w-full flex-col items-center justify-center gap-1 rounded-input border border-dashed border-border bg-surface-2 text-sm text-text-muted">
                       <span className="font-medium text-text">{d}</span>
                       <span className="text-xs">Vista previa</span>
-                    </button>
+                    </div>
                   </li>
                 ))}
               </ul>

@@ -16,10 +16,10 @@ export type Solicitud = {
 };
 
 export const solicitudes: Solicitud[] = [
-  { id: "s1", nombre: "Marcelo Antelo Vaca", ci: "5123478 SC", telefono: "+591 7712 3456", nroInterno: "114", enviada: "26 nov, 08:12", vehiculo: { marca: "Toyota", modelo: "Vitz", anio: 2012, color: "Blanco", placa: "2845-KLM" } },
-  { id: "s2", nombre: "Rosa Mamani Quispe", ci: "7894561 SC", telefono: "+591 6934 8821", nroInterno: "207", enviada: "25 nov, 17:40", vehiculo: { marca: "Suzuki", modelo: "Alto", anio: 2015, color: "Amarillo", placa: "3310-PTR" } },
-  { id: "s3", nombre: "Julio César Roca Justiniano", ci: "4456120 SC", telefono: "+591 7601 2290", nroInterno: "058", enviada: "25 nov, 11:03", vehiculo: { marca: "Nissan", modelo: "Tiida", anio: 2010, color: "Gris", placa: "1977-BDX" } },
-  { id: "s4", nombre: "Verónica Súarez Parada", ci: "8120937 SC", telefono: "+591 7855 0147", nroInterno: "231", enviada: "24 nov, 15:26", vehiculo: { marca: "Hyundai", modelo: "i10", anio: 2018, color: "Plomo", placa: "4102-HGF" } },
+  { id: "s1", nombre: "Marcelo Antelo Vaca", ci: "5123478 SC", telefono: "+591 70000 0001", nroInterno: "114", enviada: "26 nov, 08:12", vehiculo: { marca: "Toyota", modelo: "Vitz", anio: 2012, color: "Blanco", placa: "0001-DEM" } },
+  { id: "s2", nombre: "Rosa Mamani Quispe", ci: "7894561 SC", telefono: "+591 60000 0002", nroInterno: "207", enviada: "25 nov, 17:40", vehiculo: { marca: "Suzuki", modelo: "Alto", anio: 2015, color: "Amarillo", placa: "0002-DEM" } },
+  { id: "s3", nombre: "Julio César Roca Justiniano", ci: "4456120 SC", telefono: "+591 70000 0003", nroInterno: "058", enviada: "25 nov, 11:03", vehiculo: { marca: "Nissan", modelo: "Tiida", anio: 2010, color: "Gris", placa: "0003-DEM" } },
+  { id: "s4", nombre: "Verónica Súarez Parada", ci: "8120937 SC", telefono: "+591 60000 0004", nroInterno: "231", enviada: "24 nov, 15:26", vehiculo: { marca: "Hyundai", modelo: "i10", anio: 2018, color: "Plomo", placa: "0004-DEM" } },
 ];
 
 export type EstadoConductor = "aprobado" | "suspendido";
@@ -37,14 +37,14 @@ export type Conductor = {
 };
 
 export const conductores: Conductor[] = [
-  { id: "c1", nombre: "Carlos Rivero Egüez", nroInterno: "012", telefono: "+591 7701 1122", vehiculo: "Toyota Corolla 2014 · Blanco", placa: "1520-ABC", estado: "aprobado", viajes: 1284, calificacion: 4.9 },
-  { id: "c2", nombre: "Ana Lía Chávez Moreno", nroInterno: "045", telefono: "+591 6988 4410", vehiculo: "Suzuki Swift 2016 · Rojo", placa: "2231-DEF", estado: "aprobado", viajes: 902, calificacion: 4.8 },
-  { id: "c3", nombre: "Pedro Gutiérrez Salvatierra", nroInterno: "078", telefono: "+591 7745 9033", vehiculo: "Nissan Versa 2013 · Plomo", placa: "0987-GHI", estado: "suspendido", viajes: 455, calificacion: 3.9 },
-  { id: "c4", nombre: "Luis Fernando Añez Rojas", nroInterno: "093", telefono: "+591 7622 5871", vehiculo: "Toyota Vitz 2011 · Amarillo", placa: "3344-JKL", estado: "aprobado", viajes: 2210, calificacion: 4.7 },
-  { id: "c5", nombre: "María Elena Tapia Cuéllar", nroInterno: "131", telefono: "+591 7390 2468", vehiculo: "Kia Picanto 2017 · Blanco", placa: "2760-MNO", estado: "aprobado", viajes: 633, calificacion: 4.9 },
-  { id: "c6", nombre: "Ramiro Soliz Vargas", nroInterno: "150", telefono: "+591 6711 7790", vehiculo: "Hyundai Accent 2012 · Negro", placa: "1409-PQR", estado: "suspendido", viajes: 121, calificacion: 3.5 },
-  { id: "c7", nombre: "Diego Barba Mendoza", nroInterno: "188", telefono: "+591 7288 3351", vehiculo: "Suzuki Alto 2019 · Celeste", placa: "4518-STU", estado: "aprobado", viajes: 340, calificacion: 4.6 },
-  { id: "c8", nombre: "Gladys Ribera Pedraza", nroInterno: "202", telefono: "+591 7099 6612", vehiculo: "Toyota Yaris 2015 · Gris", placa: "2914-VWX", estado: "aprobado", viajes: 778, calificacion: 4.8 },
+  { id: "c1", nombre: "Carlos Rivero Egüez", nroInterno: "012", telefono: "+591 70000 0005", vehiculo: "Toyota Corolla 2014 · Blanco", placa: "0005-DEM", estado: "aprobado", viajes: 1284, calificacion: 4.9 },
+  { id: "c2", nombre: "Ana Lía Chávez Moreno", nroInterno: "045", telefono: "+591 60000 0006", vehiculo: "Suzuki Swift 2016 · Rojo", placa: "0006-DEM", estado: "aprobado", viajes: 902, calificacion: 4.8 },
+  { id: "c3", nombre: "Pedro Gutiérrez Salvatierra", nroInterno: "078", telefono: "+591 70000 0007", vehiculo: "Nissan Versa 2013 · Plomo", placa: "0007-DEM", estado: "suspendido", viajes: 455, calificacion: 3.9 },
+  { id: "c4", nombre: "Luis Fernando Añez Rojas", nroInterno: "093", telefono: "+591 60000 0008", vehiculo: "Toyota Vitz 2011 · Amarillo", placa: "0008-DEM", estado: "aprobado", viajes: 2210, calificacion: 4.7 },
+  { id: "c5", nombre: "María Elena Tapia Cuéllar", nroInterno: "131", telefono: "+591 70000 0009", vehiculo: "Kia Picanto 2017 · Blanco", placa: "0009-DEM", estado: "aprobado", viajes: 633, calificacion: 4.9 },
+  { id: "c6", nombre: "Ramiro Soliz Vargas", nroInterno: "150", telefono: "+591 60000 0010", vehiculo: "Hyundai Accent 2012 · Negro", placa: "0010-DEM", estado: "suspendido", viajes: 121, calificacion: 3.5 },
+  { id: "c7", nombre: "Diego Barba Mendoza", nroInterno: "188", telefono: "+591 70000 0011", vehiculo: "Suzuki Alto 2019 · Celeste", placa: "0011-DEM", estado: "aprobado", viajes: 340, calificacion: 4.6 },
+  { id: "c8", nombre: "Gladys Ribera Pedraza", nroInterno: "202", telefono: "+591 60000 0012", vehiculo: "Toyota Yaris 2015 · Gris", placa: "0012-DEM", estado: "aprobado", viajes: 778, calificacion: 4.8 },
 ];
 
 export type EstadoViaje = "en curso" | "completado" | "cancelado";

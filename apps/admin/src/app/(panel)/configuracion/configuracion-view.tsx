@@ -74,7 +74,7 @@ export function ConfiguracionView() {
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <button type="submit" className="btn-primary">Guardar cambios</button>
           <p role="status" className="text-sm font-medium text-success">
-            {guardado ? "Cambios guardados." : ""}
+            {guardado ? "Cambios guardados (demo, no se guardan)." : ""}
           </p>
         </div>
       </form>
