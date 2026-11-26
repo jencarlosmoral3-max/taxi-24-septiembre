@@ -169,18 +169,19 @@ async function route(f: Fetch, rpc: Rpc, key: string, b: Any) {
       const j = await getJson(f, `${API}/routing?waypoints=${from.lat},${from.lng}|${to.lat},${to.lng}&mode=drive&format=json&apiKey=${encodeURIComponent(key)}`, T_ROUTE) as Any;
       const leg = j?.results?.[0];
       if (!leg) throw new Error("empty route"); // no se cachea un resultado vacío
-      return leg;
+      return { distance: leg.distance as unknown, time: leg.time as unknown, geometry: parseGeometry(leg.geometry) }; // se cachea lo procesado, no el leg crudo
+
     } catch (e) {
       console.error("geo upstream", "route", String(e));
       throw new HttpError(502, "upstream_error");
     }
-  }) as Any;
+  });
   if (!isNum(leg.distance) || !isNum(leg.time)) throw new HttpError(502, "upstream_error");
   const distance_m = Math.round(leg.distance), duration_s = Math.round(leg.time);
   const { data, error } = await rpc("suggest_fare", { p_distance_m: distance_m, p_duration_s: duration_s });
   if (error?.message?.includes("invalid_route")) throw new HttpError(422, "invalid_route");
   if (error || !isNum(data)) throw new HttpError(500, "internal_error");
-  const geometry = parseGeometry(leg.geometry);
+  const { geometry } = leg;
   return { distance_m, duration_s, suggested_fare_cents: data, ...(geometry && { geometry }) };
 }
 

@@ -36,7 +36,7 @@ export function useRoute(origin?: LatLng | null, destination?: LatLng | null) {
     queryKey: ['geo-route', from, to],
     enabled: !!from && !!to,
     staleTime: 60 * 60_000,
-    retry: 1,
+    retry: false, // el fallback es la recta; reintentar gasta otra cuota
     queryFn: async () => {
       const { data, error } = await supabase.functions.invoke('geo', { body: { op: 'route', from, to } });
       if (error) throw error;

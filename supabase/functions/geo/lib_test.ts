@@ -227,3 +227,11 @@ Deno.test("route: geometry inválida no rompe la tarifa", async () => {
   const r = await handle(post({ op: "route", from: FROM, to: TO }), mk({ [O]: () => J({ results: [{ distance: 5040.4, time: 601.2, geometry: "basura" }] }) }).d);
   eq(await r.json(), { distance_m: 5040, duration_s: 601, suggested_fare_cents: 1600 });
 });
+
+Deno.test("route: segunda llamada sale de la caché con la misma geometry y un solo fetch", async () => {
+  const geometry = [[{ lat: -17.78, lon: -63.18 }, { lat: -17.8, lon: -63.2 }]];
+  const { d, calls } = mk({ [O]: () => J({ results: [{ distance: 5040.4, time: 601.2, geometry }] }) });
+  const a = await (await handle(post({ op: "route", from: FROM, to: TO }), d)).json();
+  const b = await (await handle(post({ op: "route", from: FROM, to: TO }), d)).json();
+  eq(a, b); eq(calls.length, 1); eq(b.geometry, [[-63.18, -17.78], [-63.2, -17.8]]);
+});
