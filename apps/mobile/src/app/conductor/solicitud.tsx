@@ -1,20 +1,24 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomSheet, Button, Chip, MoneyField, Text } from '@/components';
 import { Countdown, useCountdown } from '@/components/driver/Countdown';
 import { OFFER_TTL_MS } from '@/demo/data';
+import { RideMap } from '@/demo/passengerExtras';
+import { DEMO_ROUTE } from '@/demo/route';
 import { useDemoDriver } from '@/demo/useDemoDriver';
 import { useBackConfirm, useDriverPhaseGuard } from '@/lib/driverFlow';
 import { formatMoney } from '@/lib/money';
 import { theme } from '@/theme/theme';
 
 const COUNTER_BS = [1, 2, 5] as const;
+const MAP_HEIGHT = 0.3; // fraccion de la pantalla para el mapa
 
 export default function Solicitud() {
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const ok = useDriverPhaseGuard(['incoming']);
   const request = useDemoDriver((s) => s.request);
   const offer = useDemoDriver((s) => s.offer);
@@ -37,76 +41,81 @@ export default function Solicitud() {
   };
 
   return (
-    <View style={[styles.root, { paddingTop: insets.top + theme.spacing.md, paddingBottom: insets.bottom + theme.spacing.md }]}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <View style={styles.row}>
-          <Text variant="title20" accessibilityRole="header">
-            Nuevo pedido
-          </Text>
-          <View style={styles.timer} accessible={false}>
-            <MaterialCommunityIcons name="timer-outline" size={theme.size.icon} color={left <= 5 ? theme.colors.danger : theme.colors.textMuted} />
-            <Countdown left={left} color={left <= 5 ? theme.colors.danger : undefined} />
-          </View>
-        </View>
-        <View style={styles.card}>
-          <Text variant="body16Medium" color={theme.colors.primary}>
-            A {request.distanceKm.toFixed(1).replace('.', ',')} km de ti
-          </Text>
-          <View style={styles.place}>
-            <MaterialCommunityIcons name="circle-medium" size={theme.size.icon} color={theme.colors.primary} />
-            <Text variant="title18" style={styles.flex}>
-              {request.origin_text}
+    <View style={styles.root}>
+      <View style={{ height: height * MAP_HEIGHT }}>
+        <RideMap origin={request.pickup} destination={request.dropoff} route={DEMO_ROUTE} panel={0} />
+      </View>
+      <View style={[styles.body, { paddingBottom: insets.bottom + theme.spacing.md }]}>
+        <ScrollView contentContainerStyle={styles.scroll}>
+          <View style={styles.row}>
+            <Text variant="title20" accessibilityRole="header">
+              Nuevo pedido
             </Text>
+            <View style={styles.timer} accessible={false}>
+              <MaterialCommunityIcons name="timer-outline" size={theme.size.icon} color={left <= 5 ? theme.colors.danger : theme.colors.textMuted} />
+              <Countdown left={left} color={left <= 5 ? theme.colors.danger : undefined} />
+            </View>
           </View>
-          <View style={styles.place}>
-            <MaterialCommunityIcons name="map-marker" size={theme.size.icon} color={theme.colors.success} />
-            <Text variant="title18" style={styles.flex}>
-              {request.destination_text}
+          <View style={styles.card}>
+            <Text variant="body16Medium" color={theme.colors.primary}>
+              A {request.distanceKm.toFixed(1).replace('.', ',')} km de ti
             </Text>
+            <View style={styles.place}>
+              <MaterialCommunityIcons name="circle-medium" size={theme.size.icon} color={theme.colors.primary} />
+              <Text variant="title18" style={styles.flex}>
+                {request.origin_text}
+              </Text>
+            </View>
+            <View style={styles.place}>
+              <MaterialCommunityIcons name="map-marker" size={theme.size.icon} color={theme.colors.success} />
+              <Text variant="title18" style={styles.flex}>
+                {request.destination_text}
+              </Text>
+            </View>
+            <View style={styles.fare}>
+              <Text variant="body14" muted>
+                El pasajero ofrece
+              </Text>
+              <Text variant="amount32">{formatMoney(fare)}</Text>
+            </View>
           </View>
-          <View style={styles.fare}>
-            <Text variant="body14" muted>
-              El pasajero ofrece
-            </Text>
-            <Text variant="amount32">{formatMoney(fare)}</Text>
-          </View>
-        </View>
 
-        <Text variant="body14Medium" muted>
-          O contraoferta
-        </Text>
-        <View style={styles.chips}>
-          {COUNTER_BS.map((n) => (
+          <Text variant="body14Medium" muted>
+            O contraoferta
+          </Text>
+          <View style={styles.chips}>
+            {COUNTER_BS.map((n) => (
+              <Chip
+                key={n}
+                neutral
+                label={`+${n} Bs`}
+                accessibilityLabel={`Contraofertar ${formatMoney(fare + n * 100)}`}
+                selected={extraBs === n}
+                disabled={expired}
+                onPress={() => setExtraBs(extraBs === n ? null : n)}
+              />
+            ))}
             <Chip
-              key={n}
               neutral
-              label={`+${n} Bs`}
-              accessibilityLabel={`Contraofertar ${formatMoney(fare + n * 100)}`}
-              selected={extraBs === n}
+              label="Otro monto"
               disabled={expired}
-              onPress={() => setExtraBs(extraBs === n ? null : n)}
+              onPress={() => {
+                setCustom(total);
+                setCustomError(undefined);
+                setSheet(true);
+              }}
             />
-          ))}
-          <Chip
-            neutral
-            label="Otro monto"
-            disabled={expired}
-            onPress={() => {
-              setCustom(total);
-              setCustomError(undefined);
-              setSheet(true);
-            }}
-          />
-        </View>
-      </ScrollView>
+          </View>
+        </ScrollView>
 
-      <View style={styles.actions}>
-        <Button
-          label={extraBs === null ? `Aceptar ${formatMoney(fare)}` : `Ofertar ${formatMoney(total)}`}
-          disabled={expired}
-          onPress={() => offer(total)}
-        />
-        <Button label="Ignorar" variant="secondary" onPress={ignore} />
+        <View style={styles.actions}>
+          <Button
+            label={extraBs === null ? `Aceptar ${formatMoney(fare)}` : `Ofertar ${formatMoney(total)}`}
+            disabled={expired}
+            onPress={() => offer(total)}
+          />
+          <Button label="Ignorar" variant="secondary" onPress={ignore} />
+        </View>
       </View>
 
       <BottomSheet visible={sheet} onClose={() => setSheet(false)} title="Tu oferta">
@@ -126,7 +135,8 @@ export default function Solicitud() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.bg, paddingHorizontal: theme.size.screenPadding, gap: theme.spacing.sm },
+  root: { flex: 1, backgroundColor: theme.colors.bg },
+  body: { flex: 1, paddingHorizontal: theme.size.screenPadding, paddingTop: theme.spacing.md, gap: theme.spacing.sm },
   scroll: { gap: theme.spacing.md },
   row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   timer: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing['2xs'] },

@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Button, RatingStars, Text } from '@/components';
 import { MapScreen } from '@/components/driver/MapScreen';
 import { DEMO_PASSENGER_PHONE } from '@/demo/driverExtras';
+import { DEMO_PICKUP_ROUTE } from '@/demo/route';
 import { useDemoDriver } from '@/demo/useDemoDriver';
 import { confirmAction, openNavigation, useBackConfirm, useDriverPhaseGuard } from '@/lib/driverFlow';
 import { theme } from '@/theme/theme';
@@ -24,6 +25,7 @@ export default function Recoger() {
     <MapScreen
       center={[pickup.lng, pickup.lat]}
       zoom={15}
+      route={DEMO_PICKUP_ROUTE}
       pins={[{ lngLat: [pickup.lng, pickup.lat], kind: 'pickup', label: `Recogida: ${pickup.name}` }]}
     >
       <Text variant="body14Medium" muted accessibilityLiveRegion="polite">
