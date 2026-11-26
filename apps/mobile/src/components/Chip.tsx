@@ -4,14 +4,14 @@ import { theme } from '@/theme/theme';
 
 import { Text } from './Text';
 
-type Props = { label: string; selected?: boolean; onPress: () => void; disabled?: boolean; accessibilityLabel?: string; neutral?: boolean };
+type Props = { label: string; selected?: boolean; onPress: () => void; disabled?: boolean; accessibilityLabel?: string; neutral?: boolean; role?: 'button' | 'radio' };
 
-export function Chip({ label, selected = false, onPress, disabled, accessibilityLabel, neutral }: Props) {
+export function Chip({ label, selected = false, onPress, disabled, accessibilityLabel, neutral, role = 'button' }: Props) {
   return (
     <Pressable
-      accessibilityRole="button"
+      accessibilityRole={role}
       accessibilityLabel={accessibilityLabel}
-      accessibilityState={{ selected, disabled: !!disabled }}
+      accessibilityState={role === 'radio' ? { checked: selected, disabled: !!disabled } : { selected, disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
       style={({ pressed }) => [

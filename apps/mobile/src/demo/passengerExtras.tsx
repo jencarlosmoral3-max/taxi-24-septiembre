@@ -9,10 +9,15 @@ import { VyroMap } from '@/components';
 import type { Place } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
 
+import { useTripDraft } from '@/store/tripDraft';
+
 import { useDemoRide, type RideStatus } from './useDemoRide';
 
 export const MIN_FARE_CENTS = 1000; // minimo del sindicato (app_config)
-export const DEMO_DRIVER_PHONE = '70000000'; // numero de ejemplo, no es de nadie
+
+// Si no hay origen en el borrador (p. ej. recarga de la app), las pantallas del viaje usan el centro de Cochabamba en vez de quedar en blanco.
+const FALLBACK_ORIGIN: Place = { name: 'Mi ubicación', address: 'Cochabamba', lat: -17.3935, lng: -66.157 };
+export const useRideOrigin = (): Place => useTripDraft((s) => s.origin) ?? FALLBACK_ORIGIN;
 
 // Distancia en linea recta (haversine), km.
 export function distanceKm(a: Place, b: Place): number {
@@ -50,8 +55,10 @@ export function useReduceMotion(): boolean {
   return reduce;
 }
 
-// Atrás de hardware: ejecuta onBack en lugar de salir de la pantalla.
+// Atrás de hardware: ejecuta onBack en lugar de salir de la pantalla. Tambien desactiva el gesto de atras de iOS.
 export function useHardwareBack(onBack: () => void) {
+  const navigation = useNavigation();
+  useEffect(() => navigation.setOptions({ gestureEnabled: false }), [navigation]);
   useFocusEffect(
     useCallback(() => {
       const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -63,7 +70,7 @@ export function useHardwareBack(onBack: () => void) {
   );
 }
 
-export const goToCancel = () => router.push('/viaje/cancelar');
+export const goToCancel = () => router.navigate('/viaje/cancelar');
 
 function routeFor(s: RideStatus) {
   if (s === 'requested') return '/viaje/esperando';
@@ -78,13 +85,15 @@ function routeFor(s: RideStatus) {
 export function useRideGuard(allowed: RideStatus[]): boolean {
   const status = useDemoRide((s) => s.status);
   const ok = allowed.includes(status);
-  const navigation = useNavigation();
-  useEffect(() => {
-    if (ok || !navigation.isFocused()) return;
-    const to = routeFor(status);
-    if (to) router.replace(to);
-    else router.dismissTo('/');
-  }, [ok, status, navigation]);
+  // useFocusEffect: corre al enfocar y al cambiar el estado estando enfocada (sin redirigir si no es la pantalla activa).
+  useFocusEffect(
+    useCallback(() => {
+      if (ok) return;
+      const to = routeFor(status);
+      if (to) router.replace(to);
+      else router.dismissTo('/');
+    }, [ok, status]),
+  );
   return ok;
 }
 
@@ -128,18 +137,18 @@ export function RideMap({ origin, destination, driver, route }: MapProps) {
         </GeoJSONSource>
       )}
       <Marker lngLat={lngLat(origin)}>
-        <View style={styles.dot} accessibilityLabel="Punto de recogida" />
+        <View style={styles.dot} accessible accessibilityLabel="Punto de recogida" />
       </Marker>
       {destination && (
         <Marker lngLat={lngLat(destination)}>
-          <View accessibilityLabel="Destino">
+          <View accessible accessibilityLabel="Destino">
             <MaterialCommunityIcons name="map-marker" size={theme.size.starInput} color={theme.colors.text} />
           </View>
         </Marker>
       )}
       {driver && (
         <Marker lngLat={lngLat(driver)}>
-          <View style={styles.car} accessibilityLabel="Tu taxi">
+          <View style={styles.car} accessible accessibilityLabel="Tu taxi">
             <MaterialCommunityIcons name="taxi" size={theme.size.icon} color={theme.colors.onPrimary} />
           </View>
         </Marker>

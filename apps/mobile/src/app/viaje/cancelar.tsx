@@ -25,7 +25,7 @@ export default function Cancelar() {
         </Text>
         <View style={styles.chips} accessibilityRole="radiogroup">
           {REASONS.map((r) => (
-            <Chip key={r} label={r} selected={r === reason} onPress={() => setReason(r)} />
+            <Chip key={r} label={r} selected={r === reason} role="radio" onPress={() => setReason(r)} />
           ))}
         </View>
       </ScrollView>

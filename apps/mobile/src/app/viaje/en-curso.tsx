@@ -3,7 +3,7 @@ import { Modal, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text } from '@/components';
-import { RideMap, useHardwareBack, useRideGuard } from '@/demo/passengerExtras';
+import { RideMap, useHardwareBack, useRideGuard, useRideOrigin } from '@/demo/passengerExtras';
 import { useDemoRide } from '@/demo/useDemoRide';
 import { useTripDraft } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
@@ -12,34 +12,37 @@ const noop = () => {}; // atras desactivado durante el viaje
 
 export default function EnCurso() {
   const insets = useSafeAreaInsets();
-  const origin = useTripDraft((s) => s.origin);
+  const origin = useRideOrigin();
   const destination = useTripDraft((s) => s.destination);
   const { driver, completeRide } = useDemoRide();
   const ok = useRideGuard(['in_progress']);
   const [sos, setSos] = useState<'closed' | 'confirm' | 'sent'>('closed');
   useHardwareBack(sos === 'closed' ? noop : () => setSos('closed'));
 
-  if (!ok || !origin || !destination || !driver) return null;
+  if (!ok || !driver) return null;
+  const destName = destination?.name ?? 'Tu destino';
+  const name = driver.profile.full_name ?? 'Conductor';
+  const car = [driver.vehicle.brand, driver.vehicle.model].filter(Boolean).join(' ');
 
   return (
     <View style={styles.root}>
-      <RideMap origin={origin} destination={destination} route />
+      <RideMap origin={origin} destination={destination ?? undefined} route />
       <View style={[styles.panel, { paddingBottom: insets.bottom + theme.spacing.md }]}>
         <Text variant="title20" accessibilityRole="header">
           Viaje en curso
         </Text>
-        <View accessible accessibilityLabel={`Destino: ${destination.name}`}>
+        <View accessible accessibilityLabel={`Destino: ${destName}`}>
           <Text variant="body14" muted>
             Destino
           </Text>
           <Text variant="body16Medium" numberOfLines={1}>
-            {destination.name}
+            {destName}
           </Text>
         </View>
-        <View accessible accessibilityLabel={`Conductor ${driver.profile.full_name}, placa ${driver.vehicle.plate}`}>
-          <Text variant="body16Medium">{driver.profile.full_name}</Text>
+        <View accessible accessibilityLabel={`Conductor ${name}, placa ${driver.vehicle.plate}`}>
+          <Text variant="body16Medium">{name}</Text>
           <Text variant="body14" muted>
-            {driver.vehicle.brand} {driver.vehicle.model} · {driver.vehicle.plate}
+            {car} · {driver.vehicle.plate}
           </Text>
         </View>
         <Button label="SOS" variant="danger" accessibilityLabel="SOS, pedir ayuda" onPress={() => setSos('confirm')} />

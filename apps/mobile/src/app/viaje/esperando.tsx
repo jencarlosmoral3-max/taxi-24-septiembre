@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, OfferCard, Text } from '@/components';
-import { goToCancel, Pulse, RideMap, useHardwareBack, useNow, useRideGuard } from '@/demo/passengerExtras';
+import { goToCancel, Pulse, RideMap, useHardwareBack, useNow, useRideGuard, useRideOrigin } from '@/demo/passengerExtras';
 import { DEMO_DRIVERS } from '@/demo/data';
 import { useDemoRide } from '@/demo/useDemoRide';
 import { formatMoney } from '@/lib/money';
@@ -12,19 +12,32 @@ import { theme } from '@/theme/theme';
 
 export default function Esperando() {
   const insets = useSafeAreaInsets();
-  const origin = useTripDraft((s) => s.origin);
+  const origin = useRideOrigin();
   const destination = useTripDraft((s) => s.destination);
-  const { fareCents, offers, raiseFare, acceptOffer } = useDemoRide();
+  const { fareCents, offers, raiseFare, requestRide, acceptOffer } = useDemoRide();
   const ok = useRideGuard(['requested']);
   const now = useNow();
   const [rejected, setRejected] = useState<string[]>([]);
+  const [since, setSince] = useState(Date.now); // inicio de la busqueda actual
   useHardwareBack(goToCancel);
 
-  if (!ok || !origin) return null;
+  if (!ok) return null;
   const visible = offers.filter((o) => !rejected.includes(o.id) && o.expiresAt > now);
+  const empty = visible.length === 0 && now - since > 6000; // el store solo genera ofertas al pedir el viaje
   const status = visible.length
     ? `${visible.length} ${visible.length === 1 ? 'oferta' : 'ofertas'} para ti`
-    : 'Buscando conductores cercanos…';
+    : empty
+      ? 'Sin ofertas por ahora. Sube la tarifa o cancela.'
+      : 'Buscando conductores cercanos…';
+  const raise = () => {
+    const next = (fareCents ?? 0) + 100;
+    if (empty) {
+      // Sin ofertas vivas: pedir de nuevo con la tarifa mayor para que lleguen ofertas nuevas.
+      requestRide(next);
+      setRejected([]);
+      setSince(Date.now());
+    } else raiseFare(next);
+  };
 
   return (
     <View style={styles.root}>
@@ -68,7 +81,7 @@ export default function Esperando() {
         </ScrollView>
         <View style={styles.actions}>
           <Button label="Cancelar" variant="secondary" onPress={goToCancel} style={styles.flex} />
-          <Button label="Subir tarifa +1 Bs" accessibilityLabel="Subir tarifa un boliviano" onPress={() => raiseFare((fareCents ?? 0) + 100)} style={styles.flex} />
+          <Button label="Subir tarifa +1 Bs" accessibilityLabel="Subir tarifa un boliviano" onPress={raise} style={styles.flex} />
         </View>
       </View>
     </View>

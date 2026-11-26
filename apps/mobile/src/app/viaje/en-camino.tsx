@@ -1,25 +1,26 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Alert, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, RatingStars, Text } from '@/components';
-import { DEMO_DRIVER_PHONE, goToCancel, RideMap, useHardwareBack, useRideGuard } from '@/demo/passengerExtras';
+import { goToCancel, RideMap, useHardwareBack, useRideGuard, useRideOrigin } from '@/demo/passengerExtras';
 import { useDemoRide } from '@/demo/useDemoRide';
-import { useTripDraft } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
 
 export default function EnCamino() {
   const insets = useSafeAreaInsets();
-  const origin = useTripDraft((s) => s.origin);
+  const origin = useRideOrigin();
   const { status, driver, etaMin, startRide } = useDemoRide();
   const ok = useRideGuard(['assigned', 'driver_arrived']);
   useHardwareBack(goToCancel);
 
-  if (!ok || !origin || !driver) return null;
+  if (!ok || !driver) return null;
   const arrived = status === 'driver_arrived';
   // Posicion demo: el taxi se acerca al origen a medida que baja el ETA.
   const pos = arrived ? origin : { lat: origin.lat + 0.0012 * etaMin, lng: origin.lng - 0.0008 * etaMin };
   const { vehicle, profile } = driver;
+  const name = profile.full_name ?? 'Conductor';
+  const car = [vehicle.brand, vehicle.model, vehicle.color].filter(Boolean).join(' ');
 
   return (
     <View style={styles.root}>
@@ -36,7 +37,7 @@ export default function EnCamino() {
           </Text>
         )}
 
-        <View style={styles.plateBox} accessible accessibilityLabel={`Placa ${vehicle.plate}. ${vehicle.brand} ${vehicle.model} ${vehicle.color}`}>
+        <View style={styles.plateBox} accessible accessibilityLabel={`Placa ${vehicle.plate}. ${car}`}>
           <Text variant="body14" muted>
             Placa
           </Text>
@@ -44,13 +45,13 @@ export default function EnCamino() {
             {vehicle.plate}
           </Text>
           <Text variant="body16Medium">
-            {vehicle.brand} {vehicle.model} · {vehicle.color}
+            {car}
           </Text>
         </View>
 
         <View style={styles.driver}>
           <View style={styles.flex}>
-            <Text variant="body16Medium">{profile.full_name}</Text>
+            <Text variant="body16Medium">{name}</Text>
             <Text variant="body14" muted>
               Nº interno {driver.unionNumber}
             </Text>
@@ -64,8 +65,8 @@ export default function EnCamino() {
           <Button
             label="Llamar"
             variant={arrived ? 'secondary' : 'primary'}
-            accessibilityLabel={`Llamar a ${profile.full_name}`}
-            onPress={() => Linking.openURL(`tel:${DEMO_DRIVER_PHONE}`).catch(() => {})}
+            accessibilityLabel={`Llamar a ${name}`}
+            onPress={() => Alert.alert('Llamada (demo)', `En la versión real se llamaría a ${name}.`)}
             style={styles.flex}
           />
         </View>

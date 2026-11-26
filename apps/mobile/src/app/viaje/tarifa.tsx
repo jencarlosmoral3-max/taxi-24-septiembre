@@ -61,7 +61,7 @@ export default function Tarifa() {
           <Text variant="body16Medium">Pasajeros</Text>
           <View style={styles.stepper}>
             <Chip label="−" accessibilityLabel="Un pasajero menos" disabled={passengers <= 1} onPress={() => setPassengers((p) => p - 1)} />
-            <Text variant="amount20" accessibilityLiveRegion="polite" accessibilityLabel={`${passengers} pasajeros`} style={styles.count}>
+            <Text variant="amount20" accessibilityLiveRegion="polite" accessibilityLabel={`${passengers} ${passengers === 1 ? 'pasajero' : 'pasajeros'}`} style={styles.count}>
               {passengers}
             </Text>
             <Chip label="+" accessibilityLabel="Un pasajero más" disabled={passengers >= MAX_PASSENGERS} onPress={() => setPassengers((p) => p + 1)} />
@@ -75,11 +75,16 @@ export default function Tarifa() {
         </View>
       </ScrollView>
       <View style={styles.cta}>
+        {!origin && (
+          <Text variant="body14" muted accessibilityLiveRegion="polite">
+            Falta tu punto de recogida. Vuelve al inicio y fíjalo.
+          </Text>
+        )}
         <Button
           label="Buscar conductor"
-          disabled={!!error}
+          disabled={!!error || !origin}
           onPress={() => {
-            if (cents !== null && !error) requestRide(cents);
+            if (origin && cents !== null && !error) requestRide(cents);
           }}
         />
       </View>
@@ -115,5 +120,5 @@ const styles = StyleSheet.create({
   stepRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   stepper: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.xs },
   count: { minWidth: theme.spacing.xl, textAlign: 'center' },
-  cta: { paddingHorizontal: theme.size.screenPadding, paddingTop: theme.spacing.xs },
+  cta: { gap: theme.spacing.xs, paddingHorizontal: theme.size.screenPadding, paddingTop: theme.spacing.xs },
 });

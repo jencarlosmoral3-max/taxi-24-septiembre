@@ -33,14 +33,14 @@ export default function Fin() {
         <Text variant="title24" accessibilityRole="header">
           Llegaste a tu destino
         </Text>
-        <View style={styles.pay} accessible accessibilityLabel={`Paga ${finalFareCents === null ? '' : formatMoney(finalFareCents)} en efectivo al conductor`}>
+        <View style={styles.pay} accessible accessibilityLabel={finalFareCents === null ? 'Paga en efectivo al conductor' : `Paga ${formatMoney(finalFareCents)} en efectivo al conductor`}>
           <Text muted>Paga en efectivo</Text>
           <Text variant="amount32" maxFontSizeMultiplier={1.3} style={styles.amount}>
             {finalFareCents === null ? '—' : formatMoney(finalFareCents)}
           </Text>
         </View>
         <Text>
-          Conductor: <Text variant="body16Medium">{driver.profile.full_name}</Text>
+          Conductor: <Text variant="body16Medium">{driver.profile.full_name ?? 'Conductor'}</Text>
         </Text>
         <Text variant="title18">¿Cómo estuvo tu viaje?</Text>
         <RatingStars value={stars} onChange={setStars} />
