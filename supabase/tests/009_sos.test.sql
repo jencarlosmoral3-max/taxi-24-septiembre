@@ -1,5 +1,5 @@
 begin;
-select plan(18);
+select plan(25);
 
 -- Usuarios: pasajeros a1, b1; conductores d1 (viaje R1 con a1), d2 (oferta rechazada en R2 de b1), d3 pendiente.
 create function pg_temp.id(p text) returns uuid language sql immutable as $$ select ('00000000-0000-0000-0000-0000000000' || p)::uuid $$;
@@ -31,7 +31,7 @@ end $$;
 create function pg_temp.can_join(t text) returns boolean language plpgsql as $$
 begin
   perform set_config('realtime.topic', t, true);
-  return exists (select 1 from realtime.messages m where m.topic = t and m.extension = 'broadcast');
+  return exists (select 1 from realtime.messages m where m.extension = 'broadcast');
 end $$;
 create function pg_temp.can_send(t text) returns boolean language plpgsql as $$
 begin
@@ -59,17 +59,27 @@ select is((select count(*)::int from realtime.messages where topic = 'admin:sos'
 select is((select extensions.st_x(location::extensions.geometry) from public.sos_events where id = pg_temp.g('s1')), -63.18::float8, 'ubicación guardada');
 
 select pg_temp.login(pg_temp.id('b1'));
-select throws_ok(format($$select public.trigger_sos(-63.18, -17.78, gen_random_uuid(), %L)$$, pg_temp.id('c1')), '42501', 'not_allowed', 'SOS sobre viaje ajeno rechazado');
-select lives_ok($$select public.trigger_sos(-63.18, -17.78, gen_random_uuid())$$, 'SOS sin viaje permitido');
-select throws_ok($$select public.trigger_sos(-63.18, 95, gen_random_uuid())$$, 'P0001', 'invalid_input', 'coordenadas inválidas');
+select lives_ok(format($$select pg_temp.put('sb', public.trigger_sos(-63.18, -17.78, gen_random_uuid(), %L))$$, pg_temp.id('c1')), 'SOS sobre viaje ajeno no se bloquea');
+select lives_ok($$select pg_temp.put('sn', public.trigger_sos(null, null, gen_random_uuid()))$$, 'SOS sin coordenadas permitido');
+select throws_ok($$select public.trigger_sos(-63.18, 95, gen_random_uuid())$$, 'P0001', 'invalid_input', 'coordenadas fuera de rango');
+select throws_ok($$select public.trigger_sos(-63.18, null, gen_random_uuid())$$, 'P0001', 'invalid_input', 'una sola coordenada');
+select throws_ok($$select public.trigger_sos(-63.18, -17.78, null)$$, 'P0001', 'invalid_input', 'sin client_event_id');
+reset role;
+select is((select ride_id from public.sos_events where id = pg_temp.g('sb')), null, 'viaje ajeno tratado como null');
+select ok((select location is null from public.sos_events where id = pg_temp.g('sn')), 'sin coordenadas: ubicación null');
+
+-- Sin ride_id se usa el viaje activo del usuario (d1 conductor de c1 asignado).
 select pg_temp.login(pg_temp.id('d1'));
-select lives_ok(format($$select public.trigger_sos(-63.18, -17.78, gen_random_uuid(), %L)$$, pg_temp.id('c1')), 'el conductor asignado también puede');
--- Rate limit: b1 ya hizo 1; 4 más permitidos, el 6.º se rechaza; un reintento viejo sigue devolviendo su id.
+select lives_ok($$select pg_temp.put('sd', public.trigger_sos(-63.18, -17.78, gen_random_uuid()))$$, 'el conductor asignado también puede');
+reset role;
+select is((select ride_id from public.sos_events where id = pg_temp.g('sd')), pg_temp.id('c1'), 'ride_id = viaje activo');
+
+-- Rate limit: b1 lleva 2 eventos; 3 más (5 en total); el 6.º devuelve un evento existente, sin crear otro ni fallar.
 select pg_temp.login(pg_temp.id('b1'));
-select lives_ok($$select public.trigger_sos(-63.18, -17.78, ('22222222-2222-2222-2222-22222222222' || g)::uuid) from generate_series(1, 4) g$$, '4 SOS más (5 en total)');
-select throws_ok($$select public.trigger_sos(-63.18, -17.78, gen_random_uuid())$$, 'P0001', 'rate_limited', 'el 6.º en 10 min se rechaza');
-select lives_ok($$select public.trigger_sos(-63.18, -17.78, '22222222-2222-2222-2222-222222222221')$$, 'un reintento con el 5.º evento ya al límite se acepta');
-select is((select count(*)::int from public.sos_events), 5, 'el reintento no creó otro evento ni contó para el límite');
+select lives_ok($$select public.trigger_sos(-63.18, -17.78, ('22222222-2222-2222-2222-22222222222' || g)::uuid) from generate_series(1, 3) g$$, '3 SOS más (5 en total)');
+select ok(public.trigger_sos(-63.18, -17.78, gen_random_uuid()) in (select id from public.sos_events), 'el 6.º en 10 min devuelve un evento existente en vez de fallar');
+select is((select count(*)::int from public.sos_events), 5, 'no se creó un sexto evento');
+select ok(public.trigger_sos(-63.18, -17.78, '22222222-2222-2222-2222-222222222221') = public.trigger_sos(-63.18, -17.78, '22222222-2222-2222-2222-222222222221'), 'un reintento de un evento viejo devuelve siempre su mismo id');
 select pg_temp.login(pg_temp.id('e9'));
 select throws_ok($$select public.trigger_sos(-63.18, -17.78, gen_random_uuid())$$, '42501', 'not_allowed', 'sin perfil rechazado');
 
@@ -77,8 +87,10 @@ select throws_ok($$select public.trigger_sos(-63.18, -17.78, gen_random_uuid())$
 reset role;
 select pg_temp.login(pg_temp.id('ad'), 'admin');
 select ok(pg_temp.can_join('admin:sos'), 'admin se une a admin:sos');
+select ok(not pg_temp.can_send('admin:sos'), 'ni el admin escribe en admin:sos');
 select pg_temp.login(pg_temp.id('a1'));
 select ok(not pg_temp.can_join('admin:sos'), 'usuario normal no se une a admin:sos');
+select ok(not pg_temp.can_send('admin:sos'), 'usuario normal no escribe en admin:sos');
 select pg_temp.login(pg_temp.id('d1'));
 select ok(not pg_temp.can_join('admin:sos'), 'conductor no se une a admin:sos');
 reset role;

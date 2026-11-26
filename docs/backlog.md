@@ -153,6 +153,7 @@ CA: test: pedido viejo pasa a `expired` y notifica al pasajero.
 labels: backend, seguridad | High | B-02
 Solo Broadcast privado (nada de `postgres_changes`): canales `driver:{id}`, `rider:{id}`, `trip:{id}` con políticas sobre `realtime.messages`. GPS de flota por RPC `upsert_driver_location` (una fila por conductor, envío adaptativo 5–15 s, autovacuum ajustado); posición en vivo del viaje por `trip:{id}`; historial solo durante viaje en lotes.
 Nota (review B-05): políticas de `realtime.messages` con igualdad exacta (nunca `LIKE`) y `extension = 'broadcast'`: SELECT `driver:<uid>` solo si el usuario tiene fila en `drivers`, `rider:<uid>` propio, `trip:<id>` solo pasajero o conductor asignado (conocer el id no basta). INSERT denegado en `driver:*` y `rider:*` (solo el servidor emite); en `trip:*` solo el conductor asignado con viaje activo. `upsert_driver_location` rechaza saltos imposibles (velocidad/distancia) para que un conductor no barra la ciudad con `get_nearby_requests`; decidir si redondear coordenadas a ~100 m hasta `assigned`.
+Nota (review B-10): la posición en vivo del viaje la emite el servidor desde `upsert_driver_location` (evento `pos` en `trip:<id>`); ningún cliente escribe en Realtime. Ops: en el proyecto remoto desactivar "Allow public access" en Realtime → Settings (los canales públicos saltan RLS) y verificar que `private.notify` entrega (el rol `postgres` debe poder insertar en `realtime.messages`). Decisión del CTO (2026-11-26): el origen se muestra exacto a los conductores cercanos (sin redondeo); la mitigación contra barridos es el control de saltos de `upsert_driver_location`.
 CA: un usuario no puede unirse al canal de otro · la app reconcilia el estado del ride al reconectar.
 
 ### B-11 · Edge function de notificaciones push
@@ -173,11 +174,13 @@ CA: tabla de config editable por admin · tests de la fórmula.
 ### B-14 · Calificaciones
 labels: backend | Medium | B-08
 RPC `rate_ride` (1–5 + comentario) para ambos lados, solo una vez y solo en viajes `completed`. Promedio en perfil.
+Nota (review B-14): el calificado no ve quién lo calificó ni el comentario (solo promedio y cantidad). Pendiente: el promedio mezcla calificaciones como conductor y como pasajero; viajes fabricados entre cómplices pueden inflar ratings (exigir duración mínima o una calificación por par).
 CA: tests: doble calificación rechazada · calificar viaje ajeno rechazado.
 
 ### B-15 · SOS
 labels: backend, seguridad | High | B-10
 RPC `trigger_sos` registra evento con ubicación y viaje; notifica al panel admin por Broadcast + push. El cliente reintenta hasta confirmar (no depende del WebSocket).
+Nota (review B-15): el SOS nunca se rechaza por falta de GPS, viaje inválido o pulsaciones repetidas (devuelve el último evento); usa el viaje activo si no se pasa uno. Falta push (B-11) y la medición "< 3 s en admin".
 CA: evento visible en admin en < 3 s · reintento verificado sin red momentánea.
 
 ### B-16 · Suite pgTAP de puja y RLS en CI

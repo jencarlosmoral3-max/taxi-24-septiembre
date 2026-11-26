@@ -1,5 +1,5 @@
 begin;
-select plan(19);
+select plan(22);
 
 -- Usuarios: pasajeros a1, b1; conductores d1 (viaje R1 con a1), d2 (oferta rechazada en R2 de b1), d3 pendiente.
 create function pg_temp.id(p text) returns uuid language sql immutable as $$ select ('00000000-0000-0000-0000-0000000000' || p)::uuid $$;
@@ -31,7 +31,7 @@ end $$;
 create function pg_temp.can_join(t text) returns boolean language plpgsql as $$
 begin
   perform set_config('realtime.topic', t, true);
-  return exists (select 1 from realtime.messages m where m.topic = t and m.extension = 'broadcast');
+  return exists (select 1 from realtime.messages m where m.extension = 'broadcast');
 end $$;
 create function pg_temp.can_send(t text) returns boolean language plpgsql as $$
 begin
@@ -72,6 +72,12 @@ select throws_ok(format($$select public.rate_ride(%L, 5::smallint)$$, gen_random
 select pg_temp.login(pg_temp.id('d1'));
 select lives_ok(format($$select public.rate_ride(%L, 2::smallint)$$, pg_temp.id('c1')), 'conductor califica al pasajero');
 select throws_ok(format($$select public.rate_ride(%L, 5::smallint)$$, pg_temp.id('c1')), 'P0001', 'already_rated', 'doble calificación del conductor rechazada');
+reset role;
+select pg_temp.login(pg_temp.id('d1'));
+select is((select count(*)::int from public.ratings where rater_id = pg_temp.id('a1')), 0, 'el calificado no ve la fila (ni el comentario) de su calificación');
+select is((select count(*)::int from public.ratings where rater_id = pg_temp.id('d1')), 1, 'el calificador ve la suya');
+select pg_temp.login(pg_temp.id('ad'), 'admin');
+select is((select count(*)::int from public.ratings), 2, 'admin ve todas');
 reset role;
 select is((select rating_avg from public.profiles where id = pg_temp.id('d1')), 4.00::numeric, 'promedio del conductor');
 select is((select rating_count from public.profiles where id = pg_temp.id('d1')), 1, 'conteo del conductor');

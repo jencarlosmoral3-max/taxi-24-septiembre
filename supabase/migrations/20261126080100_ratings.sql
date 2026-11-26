@@ -1,5 +1,10 @@
 -- Vyro B-14: calificaciones. ratings ya tiene unique (ride_id, rater_id) y check rater <> ratee (B-01).
 -- El promedio se recalcula desde ratings con la fila del perfil bloqueada (exacto, sin deriva de redondeo y serializado por calificado).
+-- Privacidad: solo quien califica y admin ven las filas (comentarios incluidos). El calificado ve su promedio/conteo en profiles.
+drop policy ratings_select on public.ratings;
+create policy ratings_select on public.ratings for select to authenticated
+  using (rater_id = (select auth.uid()) or (select private.is_admin()));
+
 create function public.rate_ride(p_ride_id uuid, p_stars smallint, p_comment text default null)
 returns void language plpgsql security definer set search_path = '' as $$
 declare
