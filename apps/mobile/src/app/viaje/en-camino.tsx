@@ -1,5 +1,96 @@
-import { Placeholder } from '@/demo/Placeholder';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Linking, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-export default function Screen() {
-  return <Placeholder title="Tu conductor va en camino" next="/viaje/en-curso" />;
+import { Button, RatingStars, Text } from '@/components';
+import { DEMO_DRIVER_PHONE, goToCancel, RideMap, useHardwareBack, useRideGuard } from '@/demo/passengerExtras';
+import { useDemoRide } from '@/demo/useDemoRide';
+import { useTripDraft } from '@/store/tripDraft';
+import { theme } from '@/theme/theme';
+
+export default function EnCamino() {
+  const insets = useSafeAreaInsets();
+  const origin = useTripDraft((s) => s.origin);
+  const { status, driver, etaMin, startRide } = useDemoRide();
+  const ok = useRideGuard(['assigned', 'driver_arrived']);
+  useHardwareBack(goToCancel);
+
+  if (!ok || !origin || !driver) return null;
+  const arrived = status === 'driver_arrived';
+  // Posicion demo: el taxi se acerca al origen a medida que baja el ETA.
+  const pos = arrived ? origin : { lat: origin.lat + 0.0012 * etaMin, lng: origin.lng - 0.0008 * etaMin };
+  const { vehicle, profile } = driver;
+
+  return (
+    <View style={styles.root}>
+      <RideMap origin={origin} driver={pos} />
+      <View style={[styles.panel, { paddingBottom: insets.bottom + theme.spacing.md }]}>
+        {arrived ? (
+          <View style={styles.banner} accessible accessibilityLiveRegion="polite" accessibilityLabel={`Tu taxi llegó. Placa ${vehicle.plate}`}>
+            <MaterialCommunityIcons name="check-circle" size={theme.size.starInput} color={theme.colors.text} />
+            <Text variant="title20">Tu taxi llegó</Text>
+          </View>
+        ) : (
+          <Text variant="title20" accessibilityRole="header" accessibilityLiveRegion="polite">
+            Tu conductor llega en {etaMin} min
+          </Text>
+        )}
+
+        <View style={styles.plateBox} accessible accessibilityLabel={`Placa ${vehicle.plate}. ${vehicle.brand} ${vehicle.model} ${vehicle.color}`}>
+          <Text variant="body14" muted>
+            Placa
+          </Text>
+          <Text variant="amount32" maxFontSizeMultiplier={1.3} style={styles.plate}>
+            {vehicle.plate}
+          </Text>
+          <Text variant="body16Medium">
+            {vehicle.brand} {vehicle.model} · {vehicle.color}
+          </Text>
+        </View>
+
+        <View style={styles.driver}>
+          <View style={styles.flex}>
+            <Text variant="body16Medium">{profile.full_name}</Text>
+            <Text variant="body14" muted>
+              Nº interno {driver.unionNumber}
+            </Text>
+          </View>
+          <RatingStars value={profile.rating_avg ?? 0} />
+        </View>
+
+        {arrived && <Button label="Ya estoy en el taxi" onPress={startRide} />}
+        <View style={styles.actions}>
+          <Button label="Cancelar" variant="secondary" onPress={goToCancel} style={styles.flex} />
+          <Button
+            label="Llamar"
+            variant={arrived ? 'secondary' : 'primary'}
+            accessibilityLabel={`Llamar a ${profile.full_name}`}
+            onPress={() => Linking.openURL(`tel:${DEMO_DRIVER_PHONE}`).catch(() => {})}
+            style={styles.flex}
+          />
+        </View>
+      </View>
+    </View>
+  );
 }
+
+const styles = StyleSheet.create({
+  root: { flex: 1, backgroundColor: theme.colors.bg },
+  flex: { flex: 1 },
+  panel: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    padding: theme.size.screenPadding,
+    gap: theme.spacing.sm,
+    backgroundColor: theme.colors.surface,
+    borderTopLeftRadius: theme.radii.card,
+    borderTopRightRadius: theme.radii.card,
+  },
+  banner: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, padding: theme.spacing.md, borderRadius: theme.radii.input, backgroundColor: theme.colors.successStrong },
+  plateBox: { alignItems: 'center', padding: theme.spacing.md, borderRadius: theme.radii.card, backgroundColor: theme.colors.surface2, borderWidth: 1, borderColor: theme.colors.border },
+  plate: { color: theme.colors.primary },
+  driver: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
+  actions: { flexDirection: 'row', gap: theme.spacing.sm },
+});
