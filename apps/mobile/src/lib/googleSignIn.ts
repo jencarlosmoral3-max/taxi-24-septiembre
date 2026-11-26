@@ -44,6 +44,17 @@ export async function signInWithGoogle(): Promise<SignInResult> {
   }
 }
 
+export async function signInAnonymously(): Promise<Exclude<SignInResult, 'cancelled'> | 'disabled'> {
+  try {
+    const { error } = await supabase.auth.signInAnonymously();
+    if (!error) return 'ok';
+    if (error.code === 'anonymous_provider_disabled') return 'disabled';
+    return NETWORK.test(error.message) ? 'network' : 'error';
+  } catch (e) {
+    return NETWORK.test(String((e as Error)?.message)) ? 'network' : 'error';
+  }
+}
+
 export async function signOut() {
   await supabase.auth.signOut({ scope: 'local' });
   // Privacidad: otra cuenta en el mismo telefono no debe ver recientes ni viaje anterior.

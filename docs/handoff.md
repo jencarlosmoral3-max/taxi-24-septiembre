@@ -9,10 +9,10 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
   1. Hecho: Supabase remoto con 11 migraciones verificadas por huella, Edge Function `geo` desplegada (B-12/B-13), Google (Client IDs web + Android, secret cargado por el CTO), Email apagado, Realtime solo privado.
   2. Hecho: P-02 login con Google por **OAuth web de Supabase** (PR #14). E2E en emulador 2026-11-26: login → teléfono 70000001 (guardado en `private.contact_phones`) → matar y reabrir (sesión persiste) → cerrar sesión (vuelve a login).
   3. Hecho: P-03 home con mapa (MapLibre 11.5.1 + tiles OpenFreeMap con estilo propio empaquetado `apps/mobile/assets/map/vyro-dark.json` según `arte.md`), permiso con tarjeta previa, modo "fijar en mapa" y GPS apagado. Plan y verificación en [`docs/plan-p03.md`](plan-p03.md). **Cambiar de rama a una con MapLibre exige rebuild nativo.**
-  4. Hecho: P-04 búsqueda de destino ([`docs/plan-p04.md`](plan-p04.md)); la búsqueda usa Geoapify (PR `fix/geo-geoapify`: migración `geo_daily_caps` aplicada en remoto y `geo` v5 desplegada el 2026-11-26, búsqueda verificada en el emulador). En curso: todas las pantallas del pasajero y del conductor, plan [`docs/plan-pantallas.md`](plan-pantallas.md). Después: B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
+  4. Hecho: P-04 búsqueda de destino ([`docs/plan-p04.md`](plan-p04.md)); la búsqueda usa Geoapify (PR `fix/geo-geoapify`: migración `geo_daily_caps` aplicada en remoto y `geo` v5 desplegada el 2026-11-26, búsqueda verificada en el emulador). Hecho: fase 1 de pantallas (todas mockeadas, plan [`docs/plan-pantallas.md`](plan-pantallas.md)) + APK demo (2026-11-26). Siguiente: fase 2, cablear las pantallas al backend real (borrar `src/demo/`). Después: B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
   4. Prueba en el Samsung J7 cuando el MVP demo esté listo.
 - **Merge:** automático con CI verde (autorizado por el CTO): esperar todos los jobs (`typecheck`, `lint`, `build-admin`, `db-test`, `deno-geo`) en success sobre el head del PR y `gh pr merge --squash --delete-branch`.
-- **Repo:** `jencarlosmoral3-max/taxi-24-septiembre` (privado). Para `gh` y `git push`: `export GH_TOKEN=$(gh auth token --user jencarlosmoral3-max)`.
+- **Repo:** `jencarlosmoral3-max/taxi-24-septiembre` (público desde 2026-11-26). Para `gh` y `git push`: `export GH_TOKEN=$(gh auth token --user jencarlosmoral3-max)`.
 - **Linear:** team `IND`, proyecto `P-IND-4`.
 
 ## Estado (2026-11-26)
@@ -23,7 +23,10 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 - **Supabase:** proyecto remoto `mrhwceepvcjcdntvnsgs` (plan Free, cuenta nueva del CTO) con las 11 migraciones aplicadas y verificadas por huella y la Edge Function `geo` (`verify_jwt` activo) desplegada. Plan Free pausa tras ~7 días sin uso: abrirlo antes de cada demo. Local: `supabase/.env` (ignorado por git) con las credenciales OAuth de Google.
 - **Docs:** [arte](arte.md) · [arquitectura](arquitectura.md) · [pantallas](pantallas.md) · [backlog](backlog.md) · [decisiones](decisiones.md) · [runbook admin](runbook-admin.md) · [spike GPS](spike-gps.md).
 
-- **Pantallas fase 1** ([`plan-pantallas.md`](plan-pantallas.md)): PR de la base (datos demo en `src/demo/`, `VyroMap`, rutas y guards por modo, modo persistido, splash con timeout de hidratación, cierre de sesión que resetea modo y demo). Después: PRs de pasajero, conductor, comunes, extras (registro, permiso de ubicación, lugares guardados) y panel admin, todos con datos de ejemplo.
+- **Pantallas fase 1** ([`plan-pantallas.md`](plan-pantallas.md)), todas mergeadas con datos de ejemplo: base (#21), pasajero (#22), conductor (#23), comunes (#24), admin (#25), extras: registro, permiso de ubicación y lugares guardados (#26), trazado por calles en `geo` (#27), ruta en la solicitud y modo navegación del conductor (#28, ruta demo real de OSRM fija en `src/demo/route.ts`), entrada de prueba sin cuenta (este PR). Solo V2 queda sin pantalla (chat, programar, compartir viaje).
+- **Panel admin demo:** GitHub Pages https://jencarlosmoral3-max.github.io/taxi-24-septiembre/ (workflow `admin-pages.yml`, deploy en push a `main`; aviso de demo, `noindex`, datos ficticios). El repo es **público** desde 2026-11-26 (decisión del CTO para Pages): nunca commitear nada sensible. Fase 2: el panel real necesita host con servidor (export estático no sirve para auth).
+- **Entrada de prueba:** botón "Probar sin cuenta (demo)" con auth anónima de Supabase, visible con `EXPO_PUBLIC_DEMO_LOGIN=1` (`apps/mobile/.env`); la cuenta de prueba no pide teléfono. Quitar o restringir antes del piloto real; en fase 2 las RPC de viajes deben rechazar `is_anonymous`.
+- **APK demo:** release firmado con `debug.keystore` (SHA-1 ya registrado en el cliente Android de Google), `./gradlew assembleRelease` en `apps/mobile/android`.
 
 ## Decisiones
 Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en código), login con Google en vez de OTP, teléfono de contacto sin verificar, origen exacto para conductores, calificaciones anónimas para el calificado, Android mínimo 7.0.
@@ -31,6 +34,9 @@ Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en códi
 ## Pendiente del CTO
 - Rotar el secret de Google OAuth y la API key de Geoapify (pegada en el chat el 2026-11-26) al finalizar el producto (decisión del CTO).
 - Samsung J7 (Android desconocido, se asume ≥ 7.0) cuando el MVP demo esté listo, con la prueba de 2 h del GPS (go/no-go F-06).
+- Activar "Allow anonymous sign-ins" en Supabase (Auth → Sign In / Providers) para el botón de prueba; sin eso muestra "La entrada de prueba no está habilitada".
+- Desplegar `geo` v6 (trazado por calles, PR #27): el clasificador de permisos bloqueó el deploy del agente; `supabase functions deploy geo --project-ref mrhwceepvcjcdntvnsgs` o aprobarlo en el chat. Sin v6 la línea del pasajero es recta.
+- Google: la pantalla de consentimiento sigue en modo Prueba (solo correos cargados); publicarla si testers con otros Gmail usan Google.
 - Borrar el repo viejo: `gh auth refresh -h github.com -s delete_repo`.
 - Sin costos en el MVP: Supabase Free, mapas OSM, cuenta de Google Play ya existente.
 
@@ -44,6 +50,7 @@ Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en códi
 - Branch protection: no disponible en plan Free con repo privado (403).
 - Codex: no se corrió en esta sesión (revisiones con Opus + /security-review).
 - P-01: tras la review de UI no se vio en pantalla el contador de `RequestCard`, la selección de contraoferta, el `BottomSheet`, el teclado ni la fuente agrandada; verificar en emulador al empezar P-02. Bordes de inputs con contraste < 3:1 (token aprobado, pendiente de decisión).
+- Fase 1 de pantallas: Codex no verificado (sin cuota). Forma real de `geometry` en la respuesta de Geoapify (se verifica tras desplegar `geo` v6). Onboarding no recorrido en emulador; TalkBack y suavidad de la navegación tras los fixes de revisión sin probar en dispositivo; botón de prueba sin probar hasta activar la auth anónima.
 - Mobile `typecheck` usa `typedRoutes`: los tipos de rutas no se generan en CI; hoy pasa en clon limpio.
 
 ## Registro de planes cerrados

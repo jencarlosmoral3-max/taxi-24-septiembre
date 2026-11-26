@@ -53,7 +53,8 @@ export default function RootLayout() {
 // Sin sesion -> /login; con sesion y sin telefono -> /phone; si no, el resto de la app.
 function Gate() {
   const session = useSession();
-  const phone = useMyPhone(session?.user.id);
+  const anon = !!session?.user.is_anonymous; // cuenta de prueba: sin telefono, no pasa por /phone
+  const phone = useMyPhone(anon ? undefined : session?.user.id);
   const sessionLoaded = session !== undefined;
   const mode = useAppMode((s) => s.mode);
   const seenOnboarding = useOnboarding((s) => s.seen);
@@ -77,14 +78,14 @@ function Gate() {
   }, [ready]);
 
   if (!ready) return null;
-  if (session && phone.isPending && !phone.isError) {
+  if (session && !anon && phone.isPending && !phone.isError) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.bg }}>
         <ActivityIndicator color={theme.colors.primary} />
       </View>
     );
   }
-  if (session && phone.isError && phone.data === undefined) {
+  if (session && !anon && phone.isError && phone.data === undefined) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', gap: theme.spacing.md, padding: theme.size.screenPadding }}>
         <Text variant="title20">No pudimos cargar tu cuenta</Text>
@@ -94,7 +95,7 @@ function Gate() {
     );
   }
   const hasSession = !!session;
-  const hasPhone = !!phone.data;
+  const hasPhone = anon || !!phone.data;
   const inApp = hasSession && hasPhone && profileDone;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.bg } }}>

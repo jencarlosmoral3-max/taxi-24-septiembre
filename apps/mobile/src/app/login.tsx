@@ -3,12 +3,13 @@ import { Image, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text } from '@/components';
-import { signInWithGoogle } from '@/lib/googleSignIn';
+import { signInAnonymously, signInWithGoogle } from '@/lib/googleSignIn';
 import { theme } from '@/theme/theme';
 
 const ERRORS = {
   network: 'Sin conexión. Revisa tu internet e inténtalo de nuevo.',
   deleted: 'Esta cuenta fue eliminada.',
+  disabled: 'La entrada de prueba no está habilitada.',
   error: 'No pudimos iniciar sesión. Inténtalo de nuevo.',
 } as const;
 
@@ -16,6 +17,7 @@ export default function Login() {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [demoLoading, setDemoLoading] = useState(false);
   const [cancels, setCancels] = useState(0);
 
   const onPress = async () => {
@@ -25,6 +27,14 @@ export default function Login() {
     setLoading(false);
     setCancels(r === 'cancelled' ? cancels + 1 : 0);
     if (r === 'network' || r === 'error' || r === 'deleted') setError(ERRORS[r]); // 'cancelled' no muestra nada; 'ok' lo redirige el gate
+  };
+
+  const onDemo = async () => {
+    setDemoLoading(true);
+    setError(null);
+    const r = await signInAnonymously();
+    setDemoLoading(false);
+    if (r !== 'ok') setError(ERRORS[r]); // 'ok' lo redirige el gate
   };
 
   return (
@@ -49,7 +59,11 @@ export default function Login() {
             Si no se abrió Google o no volvió a la app, inténtalo de nuevo.
           </Text>
         )}
-        <Button label="Continuar con Google" onPress={onPress} loading={loading} />
+        <Button label="Continuar con Google" onPress={onPress} loading={loading} disabled={demoLoading} />
+        {/* shortcut: login anonimo para la demo; quitar o restringir antes del piloto real. */}
+        {process.env.EXPO_PUBLIC_DEMO_LOGIN === '1' && (
+          <Button label="Probar sin cuenta (demo)" variant="secondary" onPress={onDemo} loading={demoLoading} disabled={loading} />
+        )}
       </View>
     </View>
   );
