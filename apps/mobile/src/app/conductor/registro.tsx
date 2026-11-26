@@ -29,14 +29,20 @@ const PHOTOS = {
 type PhotoKey = keyof typeof PHOTOS;
 
 // Devuelve los errores de un paso (vacio = valido).
-function validate(step: number, f: Form): Partial<Record<keyof Form, string>> {
-  const e: Partial<Record<keyof Form, string>> = {};
+type Errors = Partial<Record<keyof Form | 'photos', string>>;
+const STEP_PHOTOS: Partial<Record<number, PhotoKey[]>> = { 1: ['license', 'ciFront', 'ciBack'], 3: ['car', 'plate', 'selfie'] };
+function validate(step: number, f: Form, photos: Partial<Record<PhotoKey, boolean>>): Errors {
+  const e: Errors = {};
+  if (STEP_PHOTOS[step]?.some((k) => !photos[k])) e.photos = 'Marca todas las fotos como listas para continuar';
   const required: (keyof Form)[] = step === 0 ? ['name', 'ci', 'member'] : step === 2 ? ['plate', 'brand', 'model', 'color', 'year', 'ruat', 'soat'] : [];
   for (const k of required) if (!f[k].trim()) e[k] = REQUIRED;
   if (step === 0 && !e.name && f.name.trim().length < 3) e.name = 'Escribe tu nombre completo';
+  if (step === 0 && !e.ci && !/^\d{5,10}(-[0-9][A-Za-z])?$/.test(f.ci.trim())) e.ci = 'Solo números, con complemento opcional, p. ej. 1234567 o 1234567-1B';
+  if (step === 0 && !e.member && !/^\d+$/.test(f.member.trim())) e.member = 'Solo números';
   if (step === 2) {
     if (!e.year && (!/^\d{4}$/.test(f.year) || +f.year < 1980 || +f.year > MAX_YEAR)) e.year = 'Año de 4 dígitos, p. ej. 2016';
     if (!e.soat && !/^(0[1-9]|1[0-2])\/\d{4}$/.test(f.soat)) e.soat = 'Usa el formato MM/AAAA, p. ej. 08/2027';
+    else if (!e.soat && +f.soat.slice(3) * 12 + +f.soat.slice(0, 2) < new Date().getFullYear() * 12 + new Date().getMonth() + 1) e.soat = 'Tu SOAT está vencido';
   }
   return e;
 }
@@ -49,7 +55,7 @@ export default function Registro() {
   const [tried, setTried] = useState(false);
   const [photos, setPhotos] = useState<Partial<Record<PhotoKey, boolean>>>({});
   const set = (k: keyof Form) => (v: string) => setF((p) => ({ ...p, [k]: v }));
-  const errors = tried ? validate(step, f) : {};
+  const errors = tried ? validate(step, f, photos) : {};
   const last = step === TITLES.length - 1;
 
   const back = useCallback(() => {
@@ -64,7 +70,7 @@ export default function Registro() {
   }, [back]);
 
   const next = () => {
-    if (Object.keys(validate(step, f)).length) return setTried(true);
+    if (Object.keys(validate(step, f, photos)).length) return setTried(true);
     setTried(false);
     if (last) {
       submit();
@@ -107,7 +113,7 @@ export default function Registro() {
         {step === 0 && (
           <>
             {field('name', 'Nombre completo', { autoCapitalize: 'words', textContentType: 'name' })}
-            {field('ci', 'Carnet de identidad (CI)', { inputMode: 'numeric' })}
+            {field('ci', 'Carnet de identidad (CI)', { autoCapitalize: 'characters', autoCorrect: false, placeholder: '1234567 o 1234567-1B' })}
             {field('member', 'Nº interno / de socio del sindicato', { inputMode: 'numeric' })}
           </>
         )}
@@ -117,6 +123,7 @@ export default function Registro() {
             {slot('license')}
             {slot('ciFront')}
             {slot('ciBack')}
+            {!!errors.photos && <Text color={theme.colors.danger}>{errors.photos}</Text>}
           </>
         )}
         {step === 2 && (
@@ -136,6 +143,7 @@ export default function Registro() {
             {slot('car')}
             {slot('plate')}
             {slot('selfie')}
+            {!!errors.photos && <Text color={theme.colors.danger}>{errors.photos}</Text>}
           </>
         )}
       </ScrollView>

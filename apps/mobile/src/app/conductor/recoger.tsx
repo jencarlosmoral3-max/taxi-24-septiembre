@@ -1,10 +1,10 @@
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, RatingStars, Text } from '@/components';
 import { MapScreen } from '@/components/driver/MapScreen';
 import { DEMO_PASSENGER_PHONE } from '@/demo/driverExtras';
 import { useDemoDriver } from '@/demo/useDemoDriver';
-import { confirmAction, openNavigation, openUrl, useBackConfirm, useDriverPhaseGuard } from '@/lib/driverFlow';
+import { confirmAction, openNavigation, useBackConfirm, useDriverPhaseGuard } from '@/lib/driverFlow';
 import { theme } from '@/theme/theme';
 
 export default function Recoger() {
@@ -45,7 +45,7 @@ export default function Recoger() {
       </View>
       <View style={styles.row}>
         <Button label="Navegar" variant="secondary" style={styles.flex} onPress={() => openNavigation(pickup.lat, pickup.lng)} />
-        <Button label="Llamar" variant="secondary" style={styles.flex} onPress={() => openUrl(`tel:${DEMO_PASSENGER_PHONE}`)} />
+        <Button label="Llamar" variant="secondary" style={styles.flex} onPress={() => Alert.alert('Llamada (demo)', `En la versión real se llamaría al pasajero (${DEMO_PASSENGER_PHONE}).`)} />
       </View>
       {here ? <Button label="Iniciar viaje" onPress={start} /> : <Button label="Llegué" onPress={arrived} />}
       <Pressable accessibilityRole="button" onPress={ask} style={styles.cancel}>

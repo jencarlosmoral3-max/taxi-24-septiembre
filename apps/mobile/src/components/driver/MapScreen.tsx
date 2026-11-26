@@ -21,6 +21,8 @@ export function MapScreen({ center, zoom, pins = [], top, children }: Props) {
         {pins.map((p) => (
           <Marker key={p.kind} lngLat={p.lngLat}>
             <View
+              accessible
+              accessibilityRole="image"
               accessibilityLabel={p.label}
               style={[styles.pin, { backgroundColor: p.kind === 'pickup' ? theme.colors.primary : theme.colors.success }]}
             />

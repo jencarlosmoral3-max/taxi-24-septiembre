@@ -23,7 +23,7 @@ export default function Solicitud() {
   const [sheet, setSheet] = useState(false);
   const [custom, setCustom] = useState<number | null>(null);
   const [customError, setCustomError] = useState<string>();
-  const left = useCountdown(OFFER_TTL_MS, ignore);
+  const left = useCountdown(OFFER_TTL_MS, () => useDemoDriver.getState().phase === 'incoming' && ignore());
   useBackConfirm('¿Ignorar esta solicitud?', 'Dejarás de ver este pedido.', 'Ignorar', ignore);
   if (!ok || !request) return null;
 
@@ -31,7 +31,7 @@ export default function Solicitud() {
   const total = fare + (extraBs ?? 0) * 100;
   const expired = left <= 0;
   const sendCustom = () => {
-    if (!custom || custom < 100) return setCustomError('Escribe un monto de Bs 1 o más');
+    if (!custom || custom < fare) return setCustomError(`La contraoferta debe ser de ${formatMoney(fare)} o más`);
     setSheet(false);
     offer(custom);
   };

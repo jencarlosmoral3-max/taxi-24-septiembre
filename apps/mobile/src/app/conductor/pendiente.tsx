@@ -46,14 +46,14 @@ export default function Pendiente() {
       <Text variant="body14" muted>
         Número de ejemplo: en la versión real aquí va el WhatsApp del sindicato.
       </Text>
-      <Button label="Volver al inicio" variant="secondary" onPress={() => router.replace('/conductor')} />
+      <Button label="Volver al inicio" variant="secondary" onPress={() => router.dismissTo('/conductor')} />
       <View style={styles.demo}>
         <Button
           label="Simular aprobación (demo)"
           variant="pill"
           onPress={() => {
             approve();
-            router.replace('/conductor');
+            router.dismissTo('/conductor');
           }}
         />
       </View>

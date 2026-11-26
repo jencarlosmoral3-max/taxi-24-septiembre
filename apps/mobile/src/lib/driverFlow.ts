@@ -19,9 +19,15 @@ const ROUTE: Record<DriverPhase, Href> = {
 export function useDriverPhaseGuard(accepted: DriverPhase[]): boolean {
   const phase = useDemoDriver((s) => s.phase);
   const ok = accepted.includes(phase);
-  useEffect(() => {
-    if (!ok) router.replace(ROUTE[phase]);
-  }, [ok, phase]);
+  // Solo con la pantalla enfocada: las de abajo en la pila no redirigen (evita pantallas duplicadas).
+  useFocusEffect(
+    useCallback(() => {
+      if (ok) return;
+      // idle: volver al home ya existente en la pila en vez de duplicarlo.
+      if (phase === 'idle') router.dismissTo(ROUTE.idle);
+      else router.replace(ROUTE[phase]);
+    }, [ok, phase]),
+  );
   return ok;
 }
 
@@ -69,5 +75,9 @@ export async function openNavigation(lat: number, lng: number) {
 }
 
 export function openUrl(url: string) {
-  Linking.openURL(url).catch(() => Alert.alert('No pudimos abrirlo', 'Inténtalo de nuevo.'));
+  Linking.openURL(url).catch(() =>
+    url.startsWith('tel:')
+      ? Alert.alert('No pudimos llamar', 'Tu dispositivo no puede hacer llamadas.')
+      : Alert.alert('No pudimos abrirlo', 'Inténtalo de nuevo.'),
+  );
 }

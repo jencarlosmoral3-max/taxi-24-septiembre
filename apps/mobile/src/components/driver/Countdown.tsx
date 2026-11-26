@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { AccessibilityInfo, Platform } from 'react-native';
 
 import { Text } from '@/components/Text';
 
@@ -28,12 +29,19 @@ export function useCountdown(ttlMs: number, onExpire: () => void): number {
 // Texto visible cada segundo; el lector de pantalla solo se entera en 45/30/15/10/5/0 s.
 export function Countdown({ left, color }: { left: number; color?: string }) {
   const bucket = left > 15 ? Math.ceil(left / 15) * 15 : left > 10 ? 15 : left > 5 ? 10 : left > 0 ? 5 : 0;
+  const label = bucket === 0 ? 'Tiempo agotado' : left === bucket ? `Quedan ${bucket} segundos` : `Quedan menos de ${bucket} segundos`;
+  // iOS no tiene live regions: se anuncia a mano, solo cuando cambia el tramo.
+  const lastBucket = useRef(bucket);
+  useEffect(() => {
+    if (Platform.OS === 'ios' && lastBucket.current !== bucket) AccessibilityInfo.announceForAccessibility(label);
+    lastBucket.current = bucket;
+  }, [bucket, label]);
   return (
     <Text
       variant="body16Medium"
       color={color}
       accessibilityLiveRegion="polite"
-      accessibilityLabel={bucket === 0 ? 'Tiempo agotado' : `Quedan menos de ${bucket} segundos`}
+      accessibilityLabel={label}
     >
       {left} s
     </Text>

@@ -15,7 +15,7 @@ export default function Esperando() {
   const offered = useDemoDriver((s) => s.offeredCents);
   const request = useDemoDriver((s) => s.request);
   const cancel = useDemoDriver((s) => s.cancel);
-  const left = useCountdown(OFFER_TTL_MS, cancel); // la oferta vence sola
+  const left = useCountdown(OFFER_TTL_MS, () => useDemoDriver.getState().phase === 'waiting' && cancel()); // la oferta vence sola
   const ask = () => confirmAction('¿Cancelar tu oferta?', 'El pasajero ya no la verá.', 'Cancelar oferta', cancel);
   useBackConfirm('¿Cancelar tu oferta?', 'El pasajero ya no la verá.', 'Cancelar oferta', cancel);
   if (!ok || offered === null) return null;
