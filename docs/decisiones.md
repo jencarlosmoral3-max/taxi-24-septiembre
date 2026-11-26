@@ -39,6 +39,8 @@ Aprobado por: CTO (en sesión con Claude, plan `docs/plan-planificacion-mvp.md`)
 | Login con Google en vez de OTP por SMS/WhatsApp (Twilio cuesta ≈ US$0.27 por SMS a Bolivia). Teléfono de contacto declarado sin verificar en el piloto | CTO, 2026-11-26 ("login con google") | Riesgo: números falsos de pasajeros; mitigado por padrón de conductores | Volver a OTP: activar proveedor y `get_ride_contact` lee el teléfono verificado |
 | Calificaciones anónimas para el calificado (ve solo promedio y cantidad, no quién ni el comentario) para evitar represalias | Chairman tras review Opus de B-14; el CTO puede revertir | — | Cambiar la política `ratings_select` |
 | Origen del pasajero exacto para los conductores cercanos (sin redondear a ~100 m antes de `assigned`) | CTO, 2026-11-26 ("debe ser exacto el punto de donde se recogerá al pasajero") | Riesgo: un conductor que falsea ubicación podría ver orígenes; mitigado por el control de saltos (≤ 120 km/h) | Redondear en `get_nearby_requests` |
+| Android mínimo soportado: 7.0 (API 24), el mínimo de Expo SDK 58. El Samsung J7 de prueba se asume compatible (J7 2016/Prime/Pro); el J7 2015 (Android 6) queda fuera | CTO, 2026-11-26 ("asume la más antigua aún soportada") | Versión real del J7 no verificada | Bajar de API 24 no es posible sin bajar de SDK de Expo |
+| Configuración del proyecto Supabase remoto (proveedor Google, migraciones) la hace el chairman por el MCP de Supabase en la próxima sesión | CTO, 2026-11-26 | — | — |
 
 Costos: ninguno aprobado todavía. Pendiente F-02 (Google Maps Platform, Supabase Pro, Google Play). Twilio fuera del piloto (login con Google).
 No verificado: capacidad del equipo (sin fechas), costo real de SMS a Bolivia, calidad de Google Places en Santa Cruz.
