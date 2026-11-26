@@ -251,7 +251,7 @@
     // },
 
     "email": {
-      // App solo con telefono: email deshabilitado.
+      // App solo con Google: email deshabilitado.
       "enabled": false,
       // If enabled, a user will be required to confirm any email change on both the old, and new email
       // addresses. If disabled, only the new email is required to confirm.
@@ -300,42 +300,14 @@
     },
 
     "sms": {
-      // Allow/disallow the phone provider. When false, users can't sign up or sign in with SMS.
-      // To block new signups only, set enable_signup = false under [auth] instead.
-      "enabled": true,
-      // If enabled, users need to confirm their phone number before signing in.
-      "enable_confirmations": true,
-      // Template for sending OTP to users
+      // OTP desactivado: login con Google (decisión CTO 2026-11-26). El teléfono de contacto vive en private.contact_phones.
+      "enabled": false,
+      "enable_confirmations": false,
       "template": "Your code is {{ .Code }}",
-      // Controls the minimum amount of time that must pass before sending another sms otp.
       "max_frequency": "60s",
-      // Longitud y vigencia del OTP por SMS/WhatsApp (segundos).
       "otp_length": 6,
       "otp_expiry": 300,
-
-      // Use pre-defined map of phone number to OTP for testing.
-      // Keys are the phone number with country code and without the + prefix.
-      // SOLO LOCAL (B-03): en produccion se usa Twilio Verify (WhatsApp canal primario, SMS respaldo) con secretos via env().
-      "test_otp": {
-        "59100000001": "123456",
-        "59100000002": "123456",
-        "59100000003": "123456",
-        "59100000004": "123456",
-        "59100000005": "123456"
-      },
-
-      // Configure one of the supported SMS providers: `twilio`, `twilio_verify`, `messagebird`, `textlocal`, `vonage`.
-      // ATENCION: nunca ejecutar `supabase config push` con este archivo sin un override en `remotes` (ver abajo):
-      // empujaria el twilio ficticio y test_otp (codigo fijo 123456) a produccion.
-      // Local: proveedor ficticio habilitado solo para que Auth no desactive el login por teléfono; los OTP salen de test_otp.
-      "twilio": {
-        "enabled": true,
-        "account_sid": "ACdev",
-        "message_service_sid": "MGdev",
-        // DO NOT commit your Twilio auth token to git. Use environment variable substitution instead:
-        "auth_token": "env(SUPABASE_AUTH_SMS_TWILIO_AUTH_TOKEN)"
-      },
-      // Produccion (B-03): activar en el proyecto remoto con secretos reales en env(); nunca valores en git.
+      // Reservado para el futuro (Twilio Verify); secretos solo via env(), nunca valores en git.
       "twilio_verify": {
         "enabled": false,
         "account_sid": "env(SUPABASE_AUTH_SMS_TWILIO_VERIFY_ACCOUNT_SID)",
@@ -396,6 +368,16 @@
     // `discord`, `facebook`, `github`, `gitlab`, `google`, `keycloak`, `linkedin_oidc`, `notion`, `twitch`,
     // `twitter`, `x`, `slack_oidc`, `spotify`, `workos`, `zoom`.
     "external": {
+      "google": {
+        "enabled": true,
+        "client_id": "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)",
+        // DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
+        "secret": "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)",
+        // SOLO LOCAL: la doc del CLI lo marca como requerido para Google en local. En produccion se usa nonce
+        // (la app pasa el nonce hasheado a Google y el crudo a signInWithIdToken): el proyecto remoto deja
+        // Auth > Providers > Google > "Skip nonce checks" DESACTIVADO.
+        "skip_nonce_check": true
+      },
       "apple": {
         "enabled": false,
         "client_id": "",
@@ -513,17 +495,11 @@
     }
   }
 
-  // Ejemplo de override para produccion (descomentar con el project ref real):
+  // Ejemplo de override para produccion (descomentar con el project ref real; OTP sigue desactivado):
   // "remotes": {
   //   "production": {
   //     "project_id": "<project-ref>",
-  //     "auth": {
-  //       "sms": {
-  //         "test_otp": {},
-  //         "twilio": { "enabled": false },
-  //         "twilio_verify": { "enabled": true }
-  //       }
-  //     }
+  //     "auth": { "sms": { "enabled": false } }
   //   }
   // }
 }

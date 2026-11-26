@@ -22,7 +22,7 @@ Ver [`docs/decisiones.md`](decisiones.md). Resumen: app independiente, Figma pri
 
 ## No verificado
 - Capacidad del equipo (sin fechas ni estimaciones en Linear).
-- Costos reales de OTP (WhatsApp/SMS) a Bolivia y de Google Places/Routes.
+- Costos reales de Google Places/Routes. OTP descartado en el piloto (login con Google).
 - Codex no opinó en el council (error de la CLI): la validación del stack es de 2 de 3 voces.
 - GPS en segundo plano en Android gama baja: pendiente spike F-06 (requiere teléfonos reales y Supabase).
 - Branch protection: no disponible en plan Free con repo privado (403). Sin checks requeridos, cada merge pide confirmación del CTO.

@@ -5,8 +5,8 @@ Una sola app móvil con modo **Pasajero** y modo **Conductor** (switch en perfil
 ## Común
 1. Splash
 2. Onboarding (3 slides: pide tu taxi · ofrece tu precio · conductores del sindicato verificados)
-3. Login con teléfono (+591)
-4. Código OTP (6 dígitos, reenviar con temporizador)
+3. Login con Google (un botón)
+4. Teléfono de contacto (+591, celular; lo ve la contraparte solo con viaje asignado)
 5. Registro: nombre + foto (opcional)
 6. Permiso de ubicación (explicación antes del diálogo del sistema)
 7. Perfil y ajustes (switch Pasajero/Conductor, cerrar sesión, eliminar cuenta)

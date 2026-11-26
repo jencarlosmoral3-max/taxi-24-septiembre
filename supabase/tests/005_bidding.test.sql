@@ -1,5 +1,5 @@
 begin;
-select plan(96);
+select plan(98);
 
 -- Usuarios: pasajeros A, B, C, E, X (X sin perfil); conductores D1..D7 (+ D8 pendiente).
 -- D1, D2 cerca; D3 lejos; D4 suspendido; D5 offline; D6 ubicación vieja; D7 ocupado (viaje activo).
@@ -12,6 +12,9 @@ insert into public.profiles (id, full_name)
 select pg_temp.id(p), 'U ' || p from unnest(array['a1','b1','c1','e1','91','92','93','d1','d2','d3','d4','d5','d6','d7','d8']) p -- f1 sin perfil
 on conflict (id) do update set full_name = excluded.full_name;
 delete from public.profiles where id = pg_temp.id('f1'); -- por si un trigger de alta lo creó
+-- B-03: crear pedidos y ofertar exige teléfono de contacto (private.contact_phones); f1 no tiene perfil.
+insert into private.contact_phones (profile_id, phone)
+select p.id, '591700' || lpad(row_number() over (order by p.id)::text, 5, '0') from public.profiles p;
 insert into public.drivers (profile_id, status) values
   (pg_temp.id('d1'), 'approved'), (pg_temp.id('d2'), 'approved'), (pg_temp.id('d3'), 'approved'),
   (pg_temp.id('d4'), 'suspended'), (pg_temp.id('d5'), 'approved'), (pg_temp.id('d6'), 'approved'),
@@ -250,6 +253,18 @@ select is((select status::text from public.ride_offers where id = pg_temp.id('b2
 select ok(not (select is_online from public.driver_locations where driver_id = pg_temp.id('d6')), 'D6 (ubicación vieja) queda offline');
 select ok((select is_online from public.driver_locations where driver_id = pg_temp.id('d1')), 'D1 (ubicación fresca) sigue online');
 select is((select count(*)::int from cron.job where jobname = 'vyro-expire-stale'), 1, 'job de pg_cron programado');
+
+-- Sin teléfono de contacto: phone_required (g1 pasajero, g2 conductor aprobado; el chequeo va antes que cualquier otro)
+reset role;
+insert into auth.users (id, instance_id, aud, role) select pg_temp.id(p), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated' from unnest(array['a9','a8']) p;
+insert into public.profiles (id, full_name) select pg_temp.id(p), 'U ' || p from unnest(array['a9','a8']) p on conflict (id) do nothing;
+insert into public.drivers (profile_id, status) values (pg_temp.id('a8'), 'approved');
+select pg_temp.login(pg_temp.id('a9'));
+select throws_ok($$select public.create_ride(-63.18, -17.78, -63.19, -17.79, 'Plaza', 'Terminal', 1000)$$, 'P0001', 'phone_required', 'create_ride sin teléfono de contacto rechazado');
+reset role;
+select pg_temp.login(pg_temp.id('a8'));
+select throws_ok(format($$select public.make_offer(%L, 1000)$$, pg_temp.g('rb')), 'P0001', 'phone_required', 'make_offer sin teléfono de contacto rechazado');
+reset role;
 
 select * from finish();
 rollback;

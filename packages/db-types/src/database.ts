@@ -334,6 +334,9 @@ isOneToOne: false
               "approved_at": string,"rejected_reason": string,"status": Database["public"]['Enums']["driver_status"],"union_member_number": string
             }[]
                            },
+"get_my_phone":
+{ Args: Record<PropertyKey, never>; Returns: string
+                           },
 "get_nearby_requests":
 { Args: Record<PropertyKey, never>; Returns: Json[]
                            },
@@ -344,6 +347,9 @@ isOneToOne: false
                            },
 "make_offer":
 { Args: { "p_price_cents": number,"p_ride_id": string }; Returns: string
+                           },
+"set_my_phone":
+{ Args: { "p_phone": string }; Returns: undefined
                            },
 "start_ride":
 { Args: { "p_ride_id": string }; Returns: undefined
