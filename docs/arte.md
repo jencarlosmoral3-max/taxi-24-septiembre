@@ -6,7 +6,12 @@ Estado: aprobado como dirección inicial (plan aprobado por el CTO el 2026-11-25
 "El taxi del sindicato: confiable y local." Interfaz oscura con amarillo taxi como color de acción. El verde cruceño marca los estados positivos (en línea, aceptado, viaje completado).
 
 ## Logo
-Wordmark "Vyro" en negro sobre tile blanco redondeado (fuente: grilla de opciones enviada por el CTO; solo se usa Vyro). En la app oscura se usa la versión blanca sobre `bg`. El wordmark es monocromo: el amarillo sigue siendo solo color de acción, no de marca. Fuente raster de ~430 px: falta un SVG limpio dibujado a mano para impresión y tiendas.
+Wordmark "Vyro" (elegido por el CTO de una grilla de opciones). Rehecho el 2026-11-25 para la paleta, con permiso del CTO:
+- **Icono de app:** fondo `primary #F6C200` con wordmark `#191919` (10.58:1). Adaptive icon Android: mismo fondo amarillo.
+- **Splash:** wordmark amarillo sobre `bg`.
+- **Dentro de la app y del panel:** wordmark blanco sobre `bg`.
+- Vector maestro `assets/brand/vyro-wordmark.svg` (trazado con vtracer desde un raster de ~371 px) y variantes `-light`, `-dark`, `-yellow` en SVG y PNG. Quedan dos imperfecciones menores en las uniones de la "y" y en el borde de la "o": para tiendas e impresión conviene redibujarlo a mano.
+- Excepción a la regla del amarillo: en el icono y el splash el amarillo es marca, no acción.
 
 ## Archivo Figma
 [Taxi 24 — App (MVP)](https://www.figma.com/design/5qJ0oo6BIxxdfIrrZdTDEC) (D-01). La cuenta Figma es plan Starter, que permite **3 páginas**, así que la estructura es:
