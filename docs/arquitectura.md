@@ -59,12 +59,12 @@ Salidas: `cancelled_passenger`, `cancelled_driver`, `expired`. Cada transición 
 - RLS en el 100% de las tablas; lógica sensible solo en RPC `security definer` con `search_path` fijo.
 - Teléfono y ubicación de la contraparte visibles solo desde `assigned` hasta cerrar el viaje.
 - Bucket privado `driver-docs`: dueño escribe y lee lo suyo; admin lee con URLs firmadas cortas.
-- Rate limit en OTP, en el proxy de Places/Routes y en `create_ride`.
+- Rate limit en el proxy de Places/Routes y en `create_ride`. Login con Google: el ID token se valida con nonce en producción ("Skip nonce checks" apagado en el proyecto remoto).
 - SOS: RPC con reintento en el cliente hasta recibir confirmación + Broadcast y push al admin. No depende del WebSocket.
 - Eliminar cuenta: anonimizar datos personales y conservar viajes para auditoría del sindicato.
 
 ## Costos (a aprobar en F-02)
-Twilio Verify (WhatsApp/SMS por verificación) · Google Places/Routes (ruta calculada una vez por pedido, autocomplete con session token y debounce) · Supabase Pro US$25/mes al piloto · Google Play US$25 · Apple US$99/año (V2). Maps SDK Android: sin costo por carga.
+Google Places/Routes (ruta calculada una vez por pedido, autocomplete con session token y debounce) · Supabase Pro US$25/mes al piloto · Google Play US$25 · Apple US$99/año (V2). Maps SDK Android: sin costo por carga.
 
 ## Calidad
 - pgTAP para RPCs de puja, transiciones y RLS (incluye test de concurrencia de `accept_offer`).
@@ -73,7 +73,7 @@ Twilio Verify (WhatsApp/SMS por verificación) · Google Places/Routes (ruta cal
 
 ## Riesgos
 1. **Android gama baja** mata servicios y WebSockets en segundo plano (Xiaomi, Tecno, Samsung). Mitigación: foreground service, push FCM de alta prioridad, reconciliación; spike F-06 temprano.
-2. **Teléfono sin verificar** (login con Google): un pasajero puede declarar un número falso. Mitigación: conductores validados por el padrón y documentos; verificación por WhatsApp después del piloto si hay abuso.
+2. **Teléfono sin verificar** (login con Google): cualquiera puede declarar un número falso. Mitigación: hace falta teléfono para pedir u ofertar; no se puede cambiar con un viaje activo; el de un conductor aprobado queda bloqueado (lo cambia el admin, que lo valida al aprobar). Pasajeros sin validar en el piloto; verificación por WhatsApp después si hay abuso.
 3. **Calidad de direcciones en Santa Cruz**: Google Places + "fijar en mapa".
 4. **Lógica en PL/pgSQL** es más difícil de depurar: cobertura pgTAP obligatoria en CI.
 5. **Dependencia de Supabase** (cuotas, incidentes): datos y lógica son Postgres estándar; Auth y Realtime serían lo que habría que reemplazar.

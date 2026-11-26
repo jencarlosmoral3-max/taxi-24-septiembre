@@ -15,7 +15,7 @@ CA: nombre aprobado por escrito · logo en SVG · registrado en `docs/decisiones
 
 ### F-02 · Aprobar presupuesto de servicios externos
 labels: infra | High | —
-CTO aprueba: Twilio Verify (SMS a Bolivia), Google Maps Platform (Places/Routes con cap), Supabase Pro para piloto, Google Play (US$25), Apple Developer (US$99/año, V2).
+CTO aprueba: Google Maps Platform (Places/Routes con cap), Supabase Pro para piloto, Google Play (US$25), Apple Developer (US$99/año, V2).
 CA: monto mensual estimado por servicio · aprobación en `docs/decisiones.md` · alertas de presupuesto configuradas.
 
 ### F-03 · Repo GitHub + CI + branch protection
@@ -28,9 +28,9 @@ labels: infra, backend | High | F-02
 Dos proyectos (dev, prod) en São Paulo. PostGIS, pg_cron y pg_net habilitados. Supabase CLI enlazado; migraciones solo vía repo.
 CA: `supabase db push` desde CI a dev · secretos solo en GitHub Secrets / Supabase.
 
-### F-05 · Cuentas de terceros: EAS, Google Cloud, Twilio
+### F-05 · Cuentas de terceros: EAS, Google Cloud
 labels: infra | High | F-02
-Cuenta Expo/EAS de la organización, proyecto Google Cloud con API keys restringidas (Android SHA-1, Places/Routes solo server), Twilio Verify.
+Cuenta Expo/EAS de la organización, proyecto Google Cloud con API keys restringidas (Android SHA-1, Places/Routes solo server) y clientes OAuth de Google Sign-In (web + Android).
 CA: keys restringidas · documentado dónde vive cada secreto (sin valores).
 
 ### F-06 · Spike GPS en segundo plano en Android gama baja (go/no-go)
@@ -49,7 +49,7 @@ CA: todas las variables de `docs/arte.md` creadas · contraste AA verificado par
 
 ### D-02 · Librería de componentes
 labels: diseño | High | D-01
-Botones (primario, secundario, peligro, pill), inputs (texto, teléfono +591, OTP, monto Bs), cards de oferta, card de pedido entrante, bottom sheets, chips, toggle En línea, tab bar, rating, marcadores de mapa.
+Botones (primario, secundario, peligro, pill), inputs (texto, teléfono +591, monto Bs), cards de oferta, card de pedido entrante, bottom sheets, chips, toggle En línea, tab bar, rating, marcadores de mapa.
 CA: componentes con variantes y auto layout · usan solo variables.
 
 ### D-03 · Estilo de mapa oscuro
@@ -64,7 +64,7 @@ CA: SVG/PNG optimizados · coherentes con la paleta.
 
 ### D-05 · Pantallas flujo común
 labels: diseño | High | D-02
-Splash, onboarding, login teléfono, OTP, registro, permiso ubicación, perfil/ajustes, soporte, historial (ver `docs/pantallas.md`).
+Splash, onboarding, login con Google, teléfono de contacto, registro, permiso ubicación, perfil/ajustes, soporte, historial (ver `docs/pantallas.md`).
 CA: todas las pantallas listadas · estados de error y carga.
 
 ### D-06 · Pantallas flujo pasajero
@@ -199,8 +199,9 @@ labels: app | Medium | F-03, D-01
 Expo Router, TypeScript estricto, tokens de `docs/arte.md` como tema, fuentes Poppins, TanStack Query, Zustand, cliente Supabase, EAS dev build con Google Maps.
 CA: dev build Android corre en teléfono real · tema aplicado.
 
-### P-02 · Onboarding, login, OTP y registro
+### P-02 · Onboarding, login con Google y registro
 labels: app | Medium | P-01, B-03, D-05
+Nota (B-03): Google Sign-In nativo con nonce (hasheado a Google, crudo a `signInWithIdToken`); pedir el teléfono con `set_my_phone` antes de pedir u ofertar (`phone_required`). `get_my_phone` puede devolver null aunque el tipo generado diga `string`.
 CA: login completo con número real · sesión persiste al reabrir · errores (código inválido, sin red) manejados.
 
 ### P-03 · Home con mapa y ubicación actual

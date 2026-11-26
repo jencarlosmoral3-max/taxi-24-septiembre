@@ -251,7 +251,7 @@
     // },
 
     "email": {
-      // App solo con telefono: email deshabilitado.
+      // App solo con Google: email deshabilitado.
       "enabled": false,
       // If enabled, a user will be required to confirm any email change on both the old, and new email
       // addresses. If disabled, only the new email is required to confirm.
@@ -373,8 +373,9 @@
         "client_id": "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_CLIENT_ID)",
         // DO NOT commit your OAuth provider secret to git. Use environment variable substitution instead:
         "secret": "env(SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET)",
-        // Login nativo (@react-native-google-signin + signInWithIdToken): el id token nativo no lleva el nonce de Supabase,
-        // y la doc del CLI lo marca como requerido para Google en local. En remoto: Auth > Providers > Google > Skip nonce checks.
+        // SOLO LOCAL: la doc del CLI lo marca como requerido para Google en local. En produccion se usa nonce
+        // (la app pasa el nonce hasheado a Google y el crudo a signInWithIdToken): el proyecto remoto deja
+        // Auth > Providers > Google > "Skip nonce checks" DESACTIVADO.
         "skip_nonce_check": true
       },
       "apple": {

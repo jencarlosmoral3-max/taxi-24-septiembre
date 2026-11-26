@@ -38,5 +38,5 @@ Aprobado por: CTO (en sesión con Claude, plan `docs/plan-planificacion-mvp.md`)
 | Puja B-05..B-09: contraofertas guardan historial (withdrawn + nueva fila); lock del ride primero y SKIP LOCKED en ofertas ajenas; rate limit 5 pedidos/10 min; notificar a los 25 conductores más cercanos; oferta ≤ 5× la tarifa del pasajero y máx. 5 por conductor y pedido; ubicación fresca 60 s; cancelar no permitido en `in_progress` | Chairman, tras review Opus (SHIP WITH FIXES) y /security-review (sin hallazgos) | 200 tests pgTAP + script de carrera 5/5 | Migración que revierta |
 | Login con Google en vez de OTP por SMS/WhatsApp (Twilio cuesta ≈ US$0.27 por SMS a Bolivia). Teléfono de contacto declarado sin verificar en el piloto | CTO, 2026-11-26 ("login con google") | Riesgo: números falsos de pasajeros; mitigado por padrón de conductores | Volver a OTP: activar proveedor y `get_ride_contact` lee el teléfono verificado |
 
-Costos: ninguno aprobado todavía. Pendiente F-02 (Twilio, Google Maps Platform, Supabase Pro, Google Play).
+Costos: ninguno aprobado todavía. Pendiente F-02 (Google Maps Platform, Supabase Pro, Google Play). Twilio fuera del piloto (login con Google).
 No verificado: capacidad del equipo (sin fechas), costo real de SMS a Bolivia, calidad de Google Places en Santa Cruz.
