@@ -33,7 +33,7 @@ function Row({ icon, label, onPress, danger }: { icon: React.ComponentProps<type
 
 export default function Perfil() {
   const session = useSession();
-  const phone = useMyPhone(session?.user.id).data;
+  const phone = useMyPhone(session?.user.is_anonymous ? undefined : session?.user.id).data;
   const { mode, setMode } = useAppMode();
   const setupName = useProfileSetup((s) => s.name);
   const name = setupName || (session?.user.user_metadata?.full_name as string | undefined) || 'Pasajero';
