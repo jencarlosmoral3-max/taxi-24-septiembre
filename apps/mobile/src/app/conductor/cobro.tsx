@@ -21,10 +21,8 @@ export default function Cobro() {
   if (!ok || !request || offered === null) return null;
 
   return (
-    <KeyboardAvoidingView
-      behavior="padding"
-      style={[styles.root, { paddingTop: insets.top + theme.spacing['3xl'], paddingBottom: insets.bottom + theme.spacing.md }]}
-    >
+    <View style={[styles.root, { paddingTop: insets.top + theme.spacing['3xl'], paddingBottom: insets.bottom + theme.spacing.md }]}>
+    <KeyboardAvoidingView behavior="padding" style={styles.flex}>
       {!paid ? (
         <>
           <View style={styles.center}>
@@ -58,11 +56,13 @@ export default function Cobro() {
         </>
       )}
     </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: theme.colors.bg, paddingHorizontal: theme.size.screenPadding, gap: theme.spacing.md },
+  root: { flex: 1, backgroundColor: theme.colors.bg, paddingHorizontal: theme.size.screenPadding },
+  flex: { flex: 1, gap: theme.spacing.md },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: theme.spacing.sm },
   text: { textAlign: 'center' },
   rate: { gap: theme.spacing.md },
