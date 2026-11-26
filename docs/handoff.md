@@ -8,7 +8,7 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 - **Siguiente paso concreto:**
   1. Hecho: Supabase remoto con 11 migraciones verificadas por huella, Edge Function `geo` desplegada (B-12/B-13), Google (Client IDs web + Android, secret cargado por el CTO), Email apagado, Realtime solo privado.
   2. Hecho: P-02 login con Google por **OAuth web de Supabase** (PR #14). E2E en emulador 2026-11-26: login → teléfono 70000001 (guardado en `private.contact_phones`) → matar y reabrir (sesión persiste) → cerrar sesión (vuelve a login).
-  3. Siguiente: P-03 mapa con MapLibre + OpenFreeMap (con "© OpenStreetMap contributors"), B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
+  3. En curso: P-03 home con mapa, plan [`docs/plan-p03.md`](plan-p03.md), rama `feat/p03-home-mapa`. Después: P-03 mapa con MapLibre + OpenFreeMap (con "© OpenStreetMap contributors"), B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
   4. Prueba en el Samsung J7 cuando el MVP demo esté listo.
 - **Merge:** automático con CI verde (autorizado por el CTO): esperar todos los jobs (`typecheck`, `lint`, `build-admin`, `db-test`, `deno-geo`) en success sobre el head del PR y `gh pr merge --squash --delete-branch`.
 - **Repo:** `jencarlosmoral3-max/taxi-24-septiembre` (privado). Para `gh` y `git push`: `export GH_TOKEN=$(gh auth token --user jencarlosmoral3-max)`.
