@@ -63,7 +63,7 @@ export default function Perfil() {
     <CommonScreen title="Perfil y ajustes">
       <View style={styles.head}>
         <Text variant="title20">{name}</Text>
-        <Text muted accessibilityLabel={phone ? `Teléfono terminado en ${phone.replace(/\D/g, '').slice(-3)}` : undefined}>{phone ? `Teléfono de contacto: ${maskPhone(phone)}` : 'Sin teléfono de contacto'}</Text>
+        <Text muted accessibilityLabel={phone ? `Teléfono terminado en ${phone.replace(/\D/g, '').slice(-3)}` : undefined}>{session?.user.is_anonymous ? 'Cuenta de prueba' : phone ? `Teléfono de contacto: ${maskPhone(phone)}` : 'Sin teléfono de contacto'}</Text>
       </View>
 
       <View style={styles.segment} accessibilityRole="radiogroup" accessibilityLabel="Modo de la app">
