@@ -3,13 +3,26 @@
 --  * security definer + search_path = '' + nombres calificados (PostGIS siempre extensions.*).
 --  * Errores de negocio: SQLSTATE P0001 con un código corto en el mensaje (fare_below_minimum, ride_not_open, ...).
 --    Autorización: SQLSTATE 42501 con mensaje not_allowed.
---  * Orden de locks: SIEMPRE el ride primero y las ofertas después. Excepción deliberada: accept_offer asigna (UPDATE de rides,
---    que choca con el índice único "1 viaje activo por conductor") ANTES de tocar las ofertas del conductor; así dos accept
---    concurrentes del mismo conductor se serializan en el índice sin ciclos de locks. expire_stale usa FOR UPDATE SKIP LOCKED
---    (nunca espera), por lo que no puede formar ciclos.
+--  * Orden de locks: SIEMPRE el ride primero y las ofertas después. accept_offer asigna (UPDATE de rides, que choca con el
+--    índice único "1 viaje activo por conductor") ANTES de tocar ofertas, así dos accept del mismo conductor se serializan en
+--    el índice. Pero las ofertas de OTROS pedidos (ofertas cruzadas D@R y D2@R' aceptadas a la vez) sí pueden formar un ciclo
+--    entre dos accept: por eso accept_offer rechaza/expira ofertas con FOR UPDATE SKIP LOCKED (nunca espera). Lo que se salte
+--    lo está modificando otra transacción (otro accept, el cron) que lo deja en un estado terminal; a lo sumo queda una oferta
+--    activa huérfana que accept_offer rechaza (ride_not_open/driver_busy) y que caduca por TTL. expire_stale también usa SKIP LOCKED.
 --  * La corrección no depende de pg_cron: cada RPC valida expires_at por su cuenta.
 --  * Cancelar un viaje en in_progress NO está permitido (el viaje se cierra con complete_ride; emergencias van por SOS, B-15).
 -- Cada función: revoke all from public, anon + grant execute to authenticated explícito (nada por defecto).
+
+-- Antigüedad máxima de la ubicación de un conductor para recibir/hacer ofertas (una sola definición).
+create function private.location_max_age() returns interval language sql immutable set search_path = '' as $$ select interval '60 seconds' $$;
+revoke all on function private.location_max_age() from public, anon, authenticated;
+
+-- Límites de texto (entrada de usuario que viaja por Broadcast/push).
+alter table public.rides
+  add constraint rides_origin_text_len check (origin_text is null or char_length(origin_text) <= 200),
+  add constraint rides_destination_text_len check (destination_text is null or char_length(destination_text) <= 200),
+  add constraint rides_comment_len check (comment is null or char_length(comment) <= 280),
+  add constraint rides_cancel_reason_len check (cancel_reason is null or char_length(cancel_reason) <= 500);
 
 -- Notificación Broadcast privado. Nunca debe romper la transacción de negocio (Realtime puede no estar disponible).
 -- Topics: driver:<uuid>, rider:<uuid>, trip:<ride uuid>.
@@ -29,7 +42,7 @@ end $$;
 revoke all on function private.notify(text, text, jsonb) from public, anon, authenticated;
 
 -- Conductores a notificar para un pedido (B-05). Expuesta en private para poder testear el conjunto sin realtime.
--- shortcut: frescura de ubicación fija en 60 s; pasarla a app_config si el sindicato lo pide.
+-- Los 25 más cercanos (limita el fan-out del Broadcast).
 create function private.nearby_driver_ids(p_ride_id uuid) returns table (driver_id uuid, distance_m double precision)
 language sql stable security definer set search_path = '' as $$
   select dl.driver_id, extensions.st_distance(dl.location, r.origin)
@@ -39,10 +52,12 @@ language sql stable security definer set search_path = '' as $$
   join public.drivers d on d.profile_id = dl.driver_id and d.status = 'approved'
   where r.id = p_ride_id
     and dl.is_online
-    and dl.updated_at > now() - interval '60 seconds'
+    and dl.updated_at > now() - private.location_max_age()
     and dl.driver_id <> r.passenger_id
     and not exists (select 1 from public.rides a where a.driver_id = dl.driver_id
                     and a.status in ('assigned', 'driver_arrived', 'in_progress'))
+  order by dl.location operator(extensions.<->) r.origin
+  limit 25
 $$;
 revoke all on function private.nearby_driver_ids(uuid) from public, anon, authenticated;
 
@@ -75,6 +90,15 @@ begin
     raise exception 'fare_below_minimum' using errcode = 'P0001';
   end if;
 
+  -- Un pedido propio vencido no debe bloquear el nuevo aunque el cron no haya corrido (ride primero, ofertas después).
+  update public.rides set status = 'expired' where passenger_id = v_uid and status = 'requested' and expires_at <= now();
+  update public.ride_offers set status = 'expired' where status = 'active'
+    and ride_id in (select r.id from public.rides r where r.passenger_id = v_uid and r.status = 'expired');
+
+  if (select count(*) from public.rides r where r.passenger_id = v_uid and r.created_at > now() - interval '10 minutes') >= 5 then
+    raise exception 'rate_limited' using errcode = 'P0001';
+  end if;
+
   begin
     insert into public.rides (passenger_id, origin, destination, origin_text, destination_text, offered_fare_cents,
                               passenger_count, comment, expires_at)
@@ -84,8 +108,11 @@ begin
             p_origin_text, p_dest_text, p_offered_fare_cents, p_passenger_count, p_comment,
             now() + make_interval(secs => v_cfg.ride_ttl_s))
     returning id into v_id;
-  exception when unique_violation then -- único índice único (aparte de la PK uuid): rides_one_open_per_passenger
-    raise exception 'passenger_has_open_ride' using errcode = 'P0001';
+  exception
+    when unique_violation then -- único índice único (aparte de la PK uuid): rides_one_open_per_passenger
+      raise exception 'passenger_has_open_ride' using errcode = 'P0001';
+    when check_violation then -- longitudes de texto
+      raise exception 'invalid_input' using errcode = 'P0001';
   end;
 
   for v_near in select * from private.nearby_driver_ids(v_id) loop
@@ -117,7 +144,7 @@ begin
     cross join public.app_config c
     join public.rides r on r.status = 'requested' and r.expires_at > now() and r.passenger_id <> v_uid
       and extensions.st_dwithin(r.origin, dl.location, c.search_radius_m)
-    where dl.driver_id = v_uid and dl.is_online and dl.updated_at > now() - interval '2 minutes'
+    where dl.driver_id = v_uid and dl.is_online and dl.updated_at > now() - private.location_max_age()
       and not exists (select 1 from public.rides a where a.driver_id = v_uid and a.status in ('assigned', 'driver_arrived', 'in_progress'))
     order by r.created_at desc
     limit 50;
@@ -146,8 +173,11 @@ begin
     raise exception 'fare_below_minimum' using errcode = 'P0001';
   end if;
   if not exists (select 1 from public.driver_locations dl where dl.driver_id = v_uid and dl.is_online
-                 and dl.updated_at > now() - interval '2 minutes') then
+                 and dl.updated_at > now() - private.location_max_age()) then
     raise exception 'driver_offline' using errcode = 'P0001';
+  end if;
+  if not exists (select 1 from public.vehicles v where v.driver_id = v_uid) then
+    raise exception 'driver_has_no_vehicle' using errcode = 'P0001';
   end if;
   if exists (select 1 from public.rides a where a.driver_id = v_uid and a.status in ('assigned', 'driver_arrived', 'in_progress')) then
     raise exception 'driver_busy' using errcode = 'P0001';
@@ -159,6 +189,12 @@ begin
   end if;
   if v_ride.passenger_id = v_uid then
     raise exception 'not_allowed' using errcode = '42501';
+  end if;
+  if p_price_cents > v_ride.offered_fare_cents::bigint * 5 then
+    raise exception 'fare_too_high' using errcode = 'P0001';
+  end if;
+  if (select count(*) from public.ride_offers o where o.ride_id = p_ride_id and o.driver_id = v_uid) >= 5 then
+    raise exception 'too_many_offers' using errcode = 'P0001';
   end if;
 
   update public.ride_offers set status = 'withdrawn' where ride_id = p_ride_id and driver_id = v_uid and status = 'active';
@@ -199,16 +235,16 @@ begin
   if v_ride.passenger_id <> v_uid then
     raise exception 'not_allowed' using errcode = '42501';
   end if;
-  if v_ride.accepted_offer_id = p_offer_id then -- idempotente ante reintentos
-    return v_ride.id;
+  if v_ride.accepted_offer_id = p_offer_id and v_ride.status in ('assigned', 'driver_arrived', 'in_progress', 'completed') then
+    return v_ride.id; -- idempotente ante reintentos (no si el viaje se canceló)
   end if;
-  if v_ride.status <> 'requested' or v_ride.expires_at <= now() then
+  if v_ride.status <> 'requested' or v_ride.expires_at <= clock_timestamp() then
     raise exception 'ride_not_open' using errcode = 'P0001';
   end if;
 
   -- Lectura sin lock a propósito (ver cabecera): el UPDATE final con status = 'active' re-valida bajo el lock de la fila.
   select * into v_offer from public.ride_offers where id = p_offer_id;
-  if v_offer.status = 'expired' or (v_offer.status = 'active' and v_offer.expires_at <= now()) then
+  if v_offer.status = 'expired' or (v_offer.status = 'active' and v_offer.expires_at <= clock_timestamp()) then
     raise exception 'offer_expired' using errcode = 'P0001';
   elsif v_offer.status <> 'active' then
     raise exception 'offer_not_active' using errcode = 'P0001';
@@ -229,20 +265,24 @@ begin
     raise exception 'driver_busy' using errcode = 'P0001';
   end;
 
-  update public.ride_offers set status = 'accepted' where id = p_offer_id and status = 'active' and expires_at > now();
+  update public.ride_offers set status = 'accepted' where id = p_offer_id and status = 'active' and expires_at > clock_timestamp();
   if not found then
     raise exception 'offer_expired' using errcode = 'P0001'; -- caducó/se retiró entre la lectura y el lock
   end if;
 
   for v_other in
     with u as (update public.ride_offers set status = 'rejected'
-               where ride_id = v_ride.id and status = 'active' and id <> p_offer_id returning driver_id, id)
+               where id in (select o.id from public.ride_offers o where o.ride_id = v_ride.id and o.status = 'active'
+                            and o.id <> p_offer_id for update skip locked)
+               returning driver_id, id)
     select * from u
   loop
     perform private.notify('driver:' || v_other.driver_id, 'offer_rejected', jsonb_build_object('ride_id', v_ride.id, 'offer_id', v_other.id));
   end loop;
   -- Las ofertas del conductor en otros pedidos dejan de tener sentido.
-  update public.ride_offers set status = 'expired' where driver_id = v_offer.driver_id and status = 'active' and ride_id <> v_ride.id;
+  update public.ride_offers set status = 'expired'
+  where id in (select o.id from public.ride_offers o where o.driver_id = v_offer.driver_id and o.status = 'active'
+               and o.ride_id <> v_ride.id for update skip locked);
 
   perform private.notify('driver:' || v_offer.driver_id, 'offer_accepted', jsonb_build_object(
     'ride_id', v_ride.id, 'offer_id', p_offer_id, 'price_cents', v_offer.price_cents));
@@ -317,8 +357,11 @@ begin
     raise exception 'invalid_transition' using errcode = 'P0001';
   end if;
   v_new := case when v_uid = v_ride.passenger_id then 'cancelled_passenger' else 'cancelled_driver' end;
-  update public.rides set status = v_new, cancelled_at = now(), cancel_reason = left(p_reason, 500) where id = p_ride_id;
-  v_payload := jsonb_build_object('ride_id', p_ride_id, 'status', v_new, 'reason', left(p_reason, 500));
+  if char_length(p_reason) > 500 then
+    raise exception 'invalid_input' using errcode = 'P0001';
+  end if;
+  update public.rides set status = v_new, cancelled_at = now(), cancel_reason = p_reason where id = p_ride_id;
+  v_payload := jsonb_build_object('ride_id', p_ride_id, 'status', v_new, 'reason', p_reason);
 
   if v_ride.status = 'requested' then -- ofertas vivas ya no tienen sentido
     for v_other in

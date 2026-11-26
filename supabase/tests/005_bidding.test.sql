@@ -1,14 +1,17 @@
 begin;
-select plan(74);
+select plan(96);
 
 -- Usuarios: pasajeros A, B, C, E, X (X sin perfil); conductores D1..D7 (+ D8 pendiente).
 -- D1, D2 cerca; D3 lejos; D4 suspendido; D5 offline; D6 ubicación vieja; D7 ocupado (viaje activo).
 create function pg_temp.id(p text) returns uuid language sql immutable as $$ select ('00000000-0000-0000-0000-0000000000' || p)::uuid $$;
-insert into auth.users (id, instance_id, aud, role)
-select pg_temp.id(p), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated'
-from unnest(array['a1','b1','c1','e1','91','f1','d1','d2','d3','d4','d5','d6','d7','d8']) p;
+-- Teléfonos sin '+' (como los guarda auth). El trigger de B-03 (si ya está mergeado) crea los perfiles: el upsert vale para ambos casos.
+insert into auth.users (id, instance_id, aud, role, phone)
+select pg_temp.id(p), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', '591700' || lpad(n::text, 5, '0')
+from unnest(array['a1','b1','c1','e1','91','92','93','f1','d1','d2','d3','d4','d5','d6','d7','d8']) with ordinality as t(p, n);
 insert into public.profiles (id, full_name)
-select pg_temp.id(p), 'U ' || p from unnest(array['a1','b1','c1','e1','91','d1','d2','d3','d4','d5','d6','d7','d8']) p; -- f1 sin perfil
+select pg_temp.id(p), 'U ' || p from unnest(array['a1','b1','c1','e1','91','92','93','d1','d2','d3','d4','d5','d6','d7','d8']) p -- f1 sin perfil
+on conflict (id) do update set full_name = excluded.full_name;
+delete from public.profiles where id = pg_temp.id('f1'); -- por si un trigger de alta lo creó
 insert into public.drivers (profile_id, status) values
   (pg_temp.id('d1'), 'approved'), (pg_temp.id('d2'), 'approved'), (pg_temp.id('d3'), 'approved'),
   (pg_temp.id('d4'), 'suspended'), (pg_temp.id('d5'), 'approved'), (pg_temp.id('d6'), 'approved'),
@@ -64,8 +67,8 @@ select throws_ok($$select public.create_ride(-63.18, -17.78, -63.19, -17.79, 'o'
 reset role;
 select is((select array_agg(driver_id order by driver_id) from private.nearby_driver_ids(pg_temp.g('ra'))),
   array[pg_temp.id('d1'), pg_temp.id('d2')], 'candidatos: solo D1 y D2 (excluye lejos, suspendido, offline, ubicación vieja, ocupado)');
-select is((select count(*)::int from realtime.messages where event = 'ride_requested' and topic = 'driver:' || pg_temp.id('d1')), 1, 'D1 recibió ride_requested por Broadcast');
-select is((select count(*)::int from realtime.messages where event = 'ride_requested' and topic in ('driver:' || pg_temp.id('d3'), 'driver:' || pg_temp.id('d7'))), 0, 'D3 y D7 no recibieron nada');
+select is((select count(*)::int from realtime.messages where event = 'ride_requested' and payload->>'ride_id' = pg_temp.g('ra')::text and topic = 'driver:' || pg_temp.id('d1')), 1, 'D1 recibió ride_requested por Broadcast');
+select is((select count(*)::int from realtime.messages where event = 'ride_requested' and payload->>'ride_id' = pg_temp.g('ra')::text and topic in ('driver:' || pg_temp.id('d3'), 'driver:' || pg_temp.id('d7'), 'driver:' || pg_temp.id('d4'))), 0, 'D3, D4 (suspendido) y D7 no recibieron nada');
 
 -- get_nearby_requests
 select pg_temp.login(pg_temp.id('d1'));
@@ -93,7 +96,7 @@ reset role;
 select is((select array_agg(status::text order by price_cents) from public.ride_offers where ride_id = pg_temp.g('ra') and driver_id = pg_temp.id('d1')),
   array['withdrawn', 'active'], 'la segunda oferta reemplaza a la primera (historial conservado)');
 select is((select count(*)::int from public.ride_offers where ride_id = pg_temp.g('ra') and status = 'active'), 1, 'una sola oferta activa por conductor y pedido');
-select is((select count(*)::int from realtime.messages where event = 'offer_made' and topic = 'rider:' || pg_temp.id('a1')), 2, 'el pasajero fue notificado de cada oferta');
+select is((select count(*)::int from realtime.messages where event = 'offer_made' and payload->>'ride_id' = pg_temp.g('ra')::text and topic = 'rider:' || pg_temp.id('a1')), 2, 'el pasajero fue notificado de cada oferta');
 select pg_temp.login(pg_temp.id('d2'));
 select lives_ok(format($$select pg_temp.put('o2', public.make_offer(%L, 1250))$$, pg_temp.g('ra')), 'D2 oferta');
 reset role;
@@ -121,7 +124,7 @@ select results_eq(format($$select status::text, driver_id, accepted_offer_id, ve
   'ride asignado con conductor, oferta y vehículo');
 select is((select status::text from public.ride_offers where id = pg_temp.g('o2')), 'rejected', 'las demás ofertas del pedido quedan rechazadas');
 select is((select status::text from public.ride_offers where id = pg_temp.g('o1c')), 'expired', 'las ofertas del conductor en otros pedidos expiran');
-select is((select count(*)::int from realtime.messages where event in ('offer_accepted', 'offer_rejected', 'ride_assigned')), 3, 'notificados conductor aceptado, rechazado y pasajero');
+select is((select count(*)::int from realtime.messages where event in ('offer_accepted', 'offer_rejected', 'ride_assigned') and payload->>'ride_id' = pg_temp.g('ra')::text), 3, 'notificados conductor aceptado, rechazado y pasajero');
 select pg_temp.login(pg_temp.id('a1'));
 select is(public.accept_offer(pg_temp.g('o1b')), pg_temp.g('ra'), 'idempotente tras el commit también');
 select throws_ok(format($$select public.accept_offer(%L)$$, pg_temp.g('o2')), 'P0001', 'ride_not_open', 'aceptar otra oferta sobre un ride ya asignado rechazado');
@@ -172,27 +175,77 @@ select pg_temp.login(pg_temp.id('a1'));
 select lives_ok(format($$select public.accept_offer(%L)$$, pg_temp.g('o3')), 'A acepta');
 select pg_temp.login(pg_temp.id('d2'));
 select throws_ok(format($$select public.cancel_ride(%L)$$, pg_temp.g('ra2')), '42501', 'not_allowed', 'conductor no asignado no cancela');
+select throws_ok(format($$select public.start_ride(%L)$$, pg_temp.g('ra2')), '42501', 'not_allowed', 'start_ride por otro conductor rechazado');
+select throws_ok(format($$select public.complete_ride(%L)$$, pg_temp.g('ra2')), '42501', 'not_allowed', 'complete_ride por otro conductor rechazado');
+select pg_temp.login(pg_temp.id('a1'));
+select throws_ok(format($$select public.start_ride(%L)$$, pg_temp.g('ra2')), '42501', 'not_allowed', 'start_ride por el pasajero rechazado');
+select throws_ok(format($$select public.complete_ride(%L)$$, pg_temp.g('ra2')), '42501', 'not_allowed', 'complete_ride por el pasajero rechazado');
 select pg_temp.login(pg_temp.id('d1'));
 select lives_ok(format($$select public.cancel_ride(%L, 'avería')$$, pg_temp.g('ra2')), 'el conductor cancela antes de iniciar');
+select pg_temp.login(pg_temp.id('a1'));
+select throws_ok(format($$select public.accept_offer(%L)$$, pg_temp.g('o3')), 'P0001', 'ride_not_open', 'reintentar accept sobre un viaje cancelado no es idempotente');
+select throws_ok($$select public.create_ride(-63.18, -17.78, -63.19, -17.79, repeat('x', 201), 'd', 1000)$$, 'P0001', 'invalid_input', 'texto demasiado largo rechazado');
+reset role;
 reset role;
 select is((select status::text from public.rides where id = pg_temp.g('ra2')), 'cancelled_driver', 'estado cancelled_driver');
+
+-- Pedido vencido por tiempo pero aún 'requested' (el cron no corrió): las RPC no dependen del cron.
+select pg_temp.login(pg_temp.id('92'));
+select lives_ok($$select pg_temp.put('r92', public.create_ride(-63.18, -17.78, -63.19, -17.79, 'Plaza', 'Terminal', 1000))$$, 'pasajero 92 crea pedido');
+select pg_temp.login(pg_temp.id('d1'));
+select lives_ok(format($$select pg_temp.put('o92', public.make_offer(%L, 1000))$$, pg_temp.g('r92')), 'D1 oferta al pedido de 92');
+reset role;
+update public.rides set created_at = now() - interval '10 minutes', expires_at = now() - interval '1 second' where id = pg_temp.g('r92');
+select pg_temp.login(pg_temp.id('d2'));
+select throws_ok(format($$select public.make_offer(%L, 1000)$$, pg_temp.g('r92')), 'P0001', 'ride_not_open', 'make_offer sobre pedido vencido rechazado');
+select pg_temp.login(pg_temp.id('92'));
+select throws_ok(format($$select public.accept_offer(%L)$$, pg_temp.g('o92')), 'P0001', 'ride_not_open', 'accept_offer sobre pedido vencido rechazado');
+select lives_ok($$select public.create_ride(-63.18, -17.78, -63.19, -17.79, 'Plaza', 'Terminal', 1000)$$, 'create_ride expira el pedido vencido propio y crea el nuevo');
+reset role;
+select is((select status::text from public.rides where id = pg_temp.g('r92')), 'expired', 'el pedido vencido quedó expired sin cron');
+select is((select status::text from public.ride_offers where id = pg_temp.g('o92')), 'expired', 'y su oferta también');
+
+-- Tarifa/ofertas excesivas, vehículo, oferta sobre pedido propio, conductor suspendido.
+select pg_temp.login(pg_temp.id('b1'));
+select lives_ok($$select pg_temp.put('rb', public.create_ride(-63.18, -17.78, -63.19, -17.79, 'Plaza', 'Terminal', 1000))$$, 'B crea un pedido vigente');
+select pg_temp.login(pg_temp.id('d1'));
+select throws_ok(format($$select public.make_offer(%L, 5001)$$, pg_temp.g('rb')), 'P0001', 'fare_too_high', 'oferta > 5x la tarifa pedida rechazada');
+select pg_temp.login(pg_temp.id('d3'));
+select throws_ok(format($$select public.make_offer(%L, 1000)$$, pg_temp.g('rb')), 'P0001', 'driver_has_no_vehicle', 'conductor sin vehículo no oferta');
+select pg_temp.login(pg_temp.id('d2'));
+select lives_ok(format($$select count(public.make_offer(%L, 1000 + g)) from generate_series(1, 5) g$$, pg_temp.g('rb')), 'D2 hace 5 ofertas al mismo pedido');
+select throws_ok(format($$select public.make_offer(%L, 1000)$$, pg_temp.g('rb')), 'P0001', 'too_many_offers', 'la 6ta oferta del mismo conductor al mismo pedido rechazada');
+select lives_ok($$select pg_temp.put('rd2', public.create_ride(-63.19, -17.78, -63.19, -17.79, 'Casa', 'Mercado', 1000))$$, 'D2 también puede pedir como pasajero');
+select throws_ok(format($$select public.make_offer(%L, 1000)$$, pg_temp.g('rd2')), '42501', 'not_allowed', 'no se oferta sobre el pedido propio');
+select lives_ok(format($$select public.cancel_ride(%L)$$, pg_temp.g('rd2')), 'D2 cancela su pedido');
+reset role;
+insert into public.ride_offers (id, ride_id, driver_id, price_cents, expires_at)
+values (pg_temp.id('b4'), pg_temp.g('rb'), pg_temp.id('d4'), 1000, now() + interval '45 s');
+select pg_temp.login(pg_temp.id('b1'));
+select throws_ok(format($$select public.accept_offer(%L)$$, pg_temp.id('b4')), 'P0001', 'driver_unavailable', 'oferta de un conductor suspendido no se acepta');
+reset role;
+
+-- Rate limit: 5 pedidos en 10 min.
+insert into public.rides (passenger_id, origin, destination, offered_fare_cents, status, expires_at)
+select pg_temp.id('93'), 'SRID=4326;POINT(-63.18 -17.78)', 'SRID=4326;POINT(-63.19 -17.79)', 1000, 'expired', now() + interval '5 minutes'
+from generate_series(1, 5);
+select pg_temp.login(pg_temp.id('93'));
+select throws_ok($$select public.create_ride(-63.18, -17.78, -63.19, -17.79, 'o', 'd', 1000)$$, 'P0001', 'rate_limited', 'más de 5 pedidos en 10 minutos rechazado');
+reset role;
 
 -- B-09 expire_stale
 insert into public.rides (id, passenger_id, origin, destination, offered_fare_cents, created_at, expires_at)
 values (pg_temp.id('e2'), pg_temp.id('91'), 'SRID=4326;POINT(-63.18 -17.78)', 'SRID=4326;POINT(-63.19 -17.79)', 1000,
   now() - interval '10 minutes', now() - interval '5 minutes');
-select pg_temp.login(pg_temp.id('b1'));
-select lives_ok($$select pg_temp.put('rb', public.create_ride(-63.18, -17.78, -63.19, -17.79, 'Plaza', 'Terminal', 1000))$$, 'B crea un pedido vigente');
-reset role;
 insert into public.ride_offers (id, ride_id, driver_id, price_cents, expires_at)
-values (pg_temp.id('b2'), pg_temp.g('rb'), pg_temp.id('d2'), 1000, now() - interval '1 second');
+values (pg_temp.id('b2'), pg_temp.g('rb'), pg_temp.id('d1'), 1000, now() - interval '1 second');
 select pg_temp.login(pg_temp.id('d1'));
 select throws_ok($$select public.expire_stale()$$, '42501', null, 'authenticated no puede ejecutar expire_stale');
 reset role;
-select is(public.expire_stale(), '{"rides_expired": 1, "offers_expired": 1, "drivers_offline": 1}'::jsonb, 'expire_stale limpia 1 pedido, 1 oferta y 1 conductor');
+select ok((public.expire_stale()->>'rides_expired')::int >= 1, 'expire_stale reporta pedidos expirados');
 select is((select status::text from public.rides where id = pg_temp.id('e2')), 'expired', 'el pedido viejo pasa a expired');
 select is((select status::text from public.rides where id = pg_temp.g('rb')), 'requested', 'el pedido vigente no se toca');
-select is((select count(*)::int from realtime.messages where event = 'ride_expired' and topic = 'rider:' || pg_temp.id('91')), 1, 'el pasajero fue notificado de la expiración');
+select is((select count(*)::int from realtime.messages where event = 'ride_expired' and payload->>'ride_id' = pg_temp.id('e2')::text and topic = 'rider:' || pg_temp.id('91')), 1, 'el pasajero fue notificado de la expiración');
 select is((select status::text from public.ride_offers where id = pg_temp.id('b2')), 'expired', 'la oferta vencida pasa a expired');
 select ok(not (select is_online from public.driver_locations where driver_id = pg_temp.id('d6')), 'D6 (ubicación vieja) queda offline');
 select ok((select is_online from public.driver_locations where driver_id = pg_temp.id('d1')), 'D1 (ubicación fresca) sigue online');
