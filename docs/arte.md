@@ -1,9 +1,17 @@
-# Dirección de arte — App Taxi 24 de Septiembre
+# Dirección de arte — Vyro (app del Sindicato 24 de Septiembre)
 
-Estado: aprobado como dirección inicial (plan aprobado por el CTO el 2026-11-25). Nombre comercial y logo pendientes del sindicato; placeholder **"Taxi 24"**.
+Estado: aprobado como dirección inicial (plan aprobado por el CTO el 2026-11-25). Nombre comercial **Vyro** y logo (wordmark "Vyro") aprobados por el CTO el 2026-11-25 (F-01). Assets en `assets/brand/`.
 
 ## Concepto
 "El taxi del sindicato: confiable y local." Interfaz oscura con amarillo taxi como color de acción. El verde cruceño marca los estados positivos (en línea, aceptado, viaje completado).
+
+## Logo
+Wordmark "Vyro" (elegido por el CTO de una grilla de opciones). Rehecho el 2026-11-25 para la paleta, con permiso del CTO:
+- **Icono de app:** fondo `primary #F6C200` con wordmark `#191919` (10.58:1). Adaptive icon Android: mismo fondo amarillo.
+- **Splash:** wordmark amarillo sobre `bg`.
+- **Dentro de la app y del panel:** wordmark blanco sobre `bg`.
+- Vector maestro `assets/brand/vyro-wordmark.svg` (trazado con vtracer desde un raster de ~371 px) y variantes `-light`, `-dark`, `-yellow` en SVG y PNG. Quedan dos imperfecciones menores en las uniones de la "y" y en el borde de la "o": para tiendas e impresión conviene redibujarlo a mano.
+- Excepción a la regla del amarillo: en el icono y el splash el amarillo es marca, no acción.
 
 ## Archivo Figma
 [Taxi 24 — App (MVP)](https://www.figma.com/design/5qJ0oo6BIxxdfIrrZdTDEC) (D-01). La cuenta Figma es plan Starter, que permite **3 páginas**, así que la estructura es:

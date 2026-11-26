@@ -1,15 +1,16 @@
 {
   "expo": {
-    "name": "Taxi 24",
-    "slug": "taxi-24",
+    "name": "Vyro",
+    "slug": "vyro",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "taxi24",
+    "scheme": "vyro",
     "userInterfaceStyle": "dark",
     "android": {
+      "package": "bo.vyro.app",
       "adaptiveIcon": {
-        "backgroundColor": "#191919",
+        "backgroundColor": "#F6C200",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -23,7 +24,7 @@
         {
           "backgroundColor": "#191919",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 240
         }
       ]
     ],

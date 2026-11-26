@@ -1,4 +1,4 @@
-# Backlog MVP — App Taxi 24 de Septiembre
+# Backlog MVP — Vyro (app del Sindicato 24 de Septiembre)
 
 Fuente de verdad del backlog cargado en Linear (team `IND`, proyecto "App Taxi 24 de Septiembre — MVP").
 Formato: `ID · Título` | labels | prioridad | bloqueado por. Debajo: descripción y criterios de aceptación (CA).
