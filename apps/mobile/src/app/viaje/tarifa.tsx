@@ -32,7 +32,8 @@ export default function Tarifa() {
   const bump = (bs: number) => setFare(Math.max(0, (cents ?? suggested) + bs * 100));
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={[styles.root, { paddingTop: insets.top + theme.spacing.xs, paddingBottom: insets.bottom + theme.spacing.md }]}>
+    <View style={[styles.root, { paddingTop: insets.top + theme.spacing.xs, paddingBottom: insets.bottom + theme.spacing.md }]}>
+    <KeyboardAvoidingView behavior="padding" style={styles.flex}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Pressable accessibilityRole="button" accessibilityLabel="Volver" onPress={() => router.back()} style={styles.back}>
           <MaterialCommunityIcons name="arrow-left" size={theme.size.starInput} color={theme.colors.text} />
@@ -89,6 +90,7 @@ export default function Tarifa() {
         />
       </View>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 

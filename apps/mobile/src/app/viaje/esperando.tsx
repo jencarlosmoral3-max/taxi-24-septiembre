@@ -81,7 +81,7 @@ export default function Esperando() {
         </ScrollView>
         <View style={styles.actions}>
           <Button label="Cancelar" variant="secondary" onPress={goToCancel} style={styles.flex} />
-          <Button label="Subir tarifa +1 Bs" accessibilityLabel="Subir tarifa un boliviano" onPress={raise} style={styles.flex} />
+          <Button label="Subir +1 Bs" accessibilityLabel="Subir tarifa un boliviano" onPress={raise} style={styles.flex} />
         </View>
       </View>
     </View>
@@ -104,7 +104,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: theme.radii.card,
   },
   head: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm },
-  list: { flexGrow: 0 },
+  list: { flexGrow: 0, flexShrink: 1 },
   listContent: { gap: theme.spacing.sm },
   offer: { gap: theme.spacing['2xs'] },
   actions: { flexDirection: 'row', gap: theme.spacing.sm },

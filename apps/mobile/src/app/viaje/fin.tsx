@@ -28,7 +28,8 @@ export default function Fin() {
   };
 
   return (
-    <KeyboardAvoidingView behavior="padding" style={[styles.root, { paddingTop: insets.top + theme.spacing.xl, paddingBottom: insets.bottom + theme.spacing.md }]}>
+    <View style={[styles.root, { paddingTop: insets.top + theme.spacing.xl, paddingBottom: insets.bottom + theme.spacing.md }]}>
+    <KeyboardAvoidingView behavior="padding" style={styles.flex}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text variant="title24" accessibilityRole="header">
           Llegaste a tu destino
@@ -51,11 +52,13 @@ export default function Fin() {
         <Button label="Omitir" variant="secondary" onPress={done} />
       </View>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: theme.colors.bg },
+  flex: { flex: 1 },
   scroll: { paddingHorizontal: theme.size.screenPadding, gap: theme.spacing.md },
   pay: { alignItems: 'center', gap: theme.spacing['2xs'], padding: theme.spacing.lg, borderRadius: theme.radii.card, backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border },
   amount: { color: theme.colors.primary },
