@@ -12,6 +12,7 @@ import { SessionProvider, useMyPhone, useSession } from '@/lib/auth';
 import { Button, Text } from '@/components';
 import { useAppMode } from '@/store/appMode';
 import { useOnboarding } from '@/store/onboarding';
+import { useProfileSetup } from '@/store/profileSetup';
 import { theme } from '@/theme/theme';
 
 import '../spike/gps-task'; // SPIKE F-06: registra la task tambien en arranque headless
@@ -58,8 +59,10 @@ function Gate() {
   const seenOnboarding = useOnboarding((s) => s.seen);
   const modeHydrated = useAppMode((s) => s.hydrated);
   const onboardingHydrated = useOnboarding((s) => s.hydrated);
+  const profileDone = useProfileSetup((s) => s.done);
+  const profileHydrated = useProfileSetup((s) => s.hydrated);
   const [hydrationTimedOut, setHydrationTimedOut] = useState(false);
-  const storesReady = (modeHydrated && onboardingHydrated) || hydrationTimedOut; // si la hidratacion no reporta en 4 s, seguir con defaults
+  const storesReady = (modeHydrated && onboardingHydrated && profileHydrated) || hydrationTimedOut; // si la hidratacion no reporta en 4 s, seguir con defaults
 
   useEffect(() => {
     const t = setTimeout(() => setHydrationTimedOut(true), 4000);
@@ -91,6 +94,7 @@ function Gate() {
   }
   const hasSession = !!session;
   const hasPhone = !!phone.data;
+  const inApp = hasSession && hasPhone && profileDone;
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: theme.colors.bg } }}>
       <Stack.Protected guard={!hasSession && !seenOnboarding}>
@@ -102,7 +106,10 @@ function Gate() {
       <Stack.Protected guard={hasSession && !hasPhone}>
         <Stack.Screen name="phone" />
       </Stack.Protected>
-      <Stack.Protected guard={hasSession && hasPhone}>
+      <Stack.Protected guard={hasSession && hasPhone && !profileDone}>
+        <Stack.Screen name="registro" />
+      </Stack.Protected>
+      <Stack.Protected guard={inApp}>
         <Stack.Screen name="index" />
         <Stack.Screen name="destino" />
         <Stack.Screen name="fijar-destino" />
@@ -111,7 +118,7 @@ function Gate() {
         <Stack.Screen name="historial/index" />
         <Stack.Screen name="historial/[id]" />
       </Stack.Protected>
-      <Stack.Protected guard={hasSession && hasPhone && mode === 'passenger'}>
+      <Stack.Protected guard={inApp && mode === 'passenger'}>
         <Stack.Screen name="viaje/tarifa" />
         <Stack.Screen name="viaje/esperando" />
         <Stack.Screen name="viaje/en-camino" />
@@ -119,7 +126,7 @@ function Gate() {
         <Stack.Screen name="viaje/fin" />
         <Stack.Screen name="viaje/cancelar" />
       </Stack.Protected>
-      <Stack.Protected guard={hasSession && hasPhone && mode === 'driver'}>
+      <Stack.Protected guard={inApp && mode === 'driver'}>
         <Stack.Screen name="conductor/index" />
         <Stack.Screen name="conductor/registro" />
         <Stack.Screen name="conductor/pendiente" />

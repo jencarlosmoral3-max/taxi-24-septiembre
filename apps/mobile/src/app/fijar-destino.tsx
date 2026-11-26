@@ -1,12 +1,12 @@
 import { Camera, type LngLat } from '@maplibre/maplibre-react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Text, VyroMap } from '@/components';
 import { geoReverse, SERVICE_BBOX } from '@/lib/geo';
-import { useTripDraft } from '@/store/tripDraft';
+import { useTripDraft, type SavedKind } from '@/store/tripDraft';
 import { theme } from '@/theme/theme';
 
 const SANTA_CRUZ: LngLat = [-63.1821, -17.7833];
@@ -16,6 +16,11 @@ export default function FijarDestino() {
   const insets = useSafeAreaInsets();
   const origin = useTripDraft((s) => s.origin);
   const setDestination = useTripDraft((s) => s.setDestination);
+  const savePlace = useTripDraft((s) => s.savePlace);
+  // ?guardar=home|work: modo "guardar lugar" (no cambia el destino, vuelve a la busqueda).
+  const { guardar } = useLocalSearchParams<{ guardar?: SavedKind }>();
+  const saveKind = guardar === 'home' || guardar === 'work' ? guardar : null;
+  const saveLabel = saveKind === 'home' ? 'casa' : 'trabajo';
   const [start] = useState<LngLat>(origin ? [origin.lng, origin.lat] : SANTA_CRUZ);
   const center = useRef<LngLat | null>(null);
   const [busy, setBusy] = useState(false);
@@ -39,6 +44,11 @@ export default function FijarDestino() {
     } catch {
       // Sin nombre: se usa el punto con coordenadas.
     }
+    if (saveKind) {
+      savePlace(saveKind, { name: saveKind === 'home' ? 'Casa' : 'Trabajo', address, lat, lng });
+      router.back();
+      return;
+    }
     setDestination({ name, address, lat, lng });
     router.dismissTo('/');
   };
@@ -55,7 +65,7 @@ export default function FijarDestino() {
       </VyroMap>
       <View pointerEvents="none" style={[styles.hint, { top: insets.top + theme.spacing.xs }]}>
         <View style={styles.chip}>
-          <Text variant="body14">Mueve el mapa hasta el punto de destino</Text>
+          <Text variant="body14">{saveKind ? `Mueve el mapa hasta tu ${saveLabel}` : 'Mueve el mapa hasta el punto de destino'}</Text>
         </View>
       </View>
       <View accessible accessibilityLabel="Destino en el centro del mapa" pointerEvents="none" style={styles.pin} />
@@ -65,7 +75,7 @@ export default function FijarDestino() {
             Ese punto está fuera del área de servicio (Santa Cruz).
           </Text>
         )}
-        <Button label="Confirmar destino" onPress={confirm} loading={busy} />
+        <Button label={saveKind ? `Guardar ${saveLabel}` : 'Confirmar destino'} onPress={confirm} loading={busy} />
         <Button label="Volver" variant="secondary" onPress={() => router.back()} />
       </View>
     </View>

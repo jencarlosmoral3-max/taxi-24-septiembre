@@ -1,4 +1,5 @@
 import { Camera, type CameraRef, Marker, type LngLat } from '@maplibre/maplibre-react-native';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Link, Redirect, router } from 'expo-router';
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -90,6 +91,17 @@ function PassengerHome() {
     const c = lastCenter.current ?? SANTA_CRUZ;
     setOriginAt(c[0], c[1]);
   }, [pinMode, setOriginAt]);
+  if (perm === 'ask') {
+    return (
+      <LocationPrePrompt
+        onAllow={request}
+        onSkip={() => {
+          dismissed.current = true;
+          setPerm('denied');
+        }}
+      />
+    );
+  }
   return (
     <View style={styles.container}>
       <VyroMap
@@ -131,14 +143,6 @@ function PassengerHome() {
           >
             <Button label="Reintentar" onPress={() => { setMapError(false); setMapKey((k) => k + 1); }} />
           </Card>
-        ) : perm === 'ask' ? (
-          <Card
-            title="Usa tu ubicación"
-            body="La necesitamos para mostrarte los taxis cercanos y fijar tu punto de recogida."
-          >
-            <Button label="Permitir ubicación" onPress={request} />
-            <Button label="Ahora no" variant="secondary" onPress={() => { dismissed.current = true; setPerm('denied'); }} />
-          </Card>
         ) : perm === 'granted' && servicesOff ? (
           <Card
             title="Activa la ubicación"
@@ -161,7 +165,7 @@ function PassengerHome() {
             )}
           </Card>
         ) : null}
-        {!mapError && perm !== 'ask' && (
+        {!mapError && (
           <Pressable
             accessibilityRole="button"
             accessibilityLabel={destination ? `Destino: ${destination.name}. Cambiar` : '¿A dónde vas?'}
@@ -186,7 +190,38 @@ function PassengerHome() {
             )}
           </Pressable>
         )}
-        {origin && destination && !mapError && perm !== 'ask' && <Button label="Continuar" onPress={() => router.push('/viaje/tarifa')} />}
+        {origin && destination && !mapError && <Button label="Continuar" onPress={() => router.push('/viaje/tarifa')} />}
+      </View>
+    </View>
+  );
+}
+
+// Explicacion previa al dialogo del sistema (solo con permiso sin decidir).
+function LocationPrePrompt({ onAllow, onSkip }: { onAllow: () => void; onSkip: () => void }) {
+  const insets = useSafeAreaInsets();
+  const reasons = [
+    { icon: 'map-marker' as const, text: 'Fijar tu punto de recogida donde estás.' },
+    { icon: 'taxi' as const, text: 'Mostrarte los taxis cercanos.' },
+  ];
+  return (
+    <View style={[styles.pre, { paddingTop: insets.top + theme.spacing['3xl'], paddingBottom: insets.bottom + theme.spacing.xl }]}>
+      <View style={styles.preBody}>
+        <View style={styles.preIcon} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <MaterialCommunityIcons name="crosshairs-gps" size={theme.size.icon * 2} color={theme.colors.primary} />
+        </View>
+        <Text variant="title24" accessibilityRole="header">Activa tu ubicación</Text>
+        <Text muted>La usamos solo mientras tienes la app abierta, para:</Text>
+        {reasons.map((r) => (
+          <View key={r.text} style={styles.reason} accessible accessibilityLabel={r.text}>
+            <MaterialCommunityIcons name={r.icon} size={theme.size.icon} color={theme.colors.primary} />
+            <Text style={styles.flex}>{r.text}</Text>
+          </View>
+        ))}
+        <Text variant="body14" muted>Si prefieres, puedes marcar tu punto de recogida moviendo el mapa.</Text>
+      </View>
+      <View style={styles.preActions}>
+        <Button label="Permitir ubicación" onPress={onAllow} />
+        <Button label="Ahora no" variant="secondary" onPress={onSkip} />
       </View>
     </View>
   );
@@ -203,6 +238,7 @@ function Card({ title, body, children }: { title: string; body: string; children
 }
 
 const PIN = theme.size.dot * 2;
+const PRE_ICON = theme.size.touchMin * 2;
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.colors.bg },
   map: { flex: 1 },
@@ -242,6 +278,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: theme.colors.border,
   },
+  pre: { flex: 1, backgroundColor: theme.colors.bg, paddingHorizontal: theme.size.screenPadding, justifyContent: 'space-between' },
+  preBody: { gap: theme.spacing.md },
+  preActions: { gap: theme.spacing.sm },
+  preIcon: { width: PRE_ICON, height: PRE_ICON, borderRadius: theme.radii.pill, alignItems: 'center', justifyContent: 'center', backgroundColor: theme.colors.surface2, alignSelf: 'center' },
+  reason: { flexDirection: 'row', alignItems: 'center', gap: theme.spacing.sm, minHeight: theme.size.touchMin },
   card: {
     gap: theme.spacing.sm,
     padding: theme.spacing.lg,

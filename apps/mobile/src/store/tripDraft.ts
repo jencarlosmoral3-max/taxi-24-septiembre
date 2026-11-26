@@ -4,6 +4,8 @@ import { createJSONStorage, persist } from 'zustand/middleware';
 
 export type Place = { name: string; address: string; lat: number; lng: number };
 
+export type SavedKind = 'home' | 'work';
+
 const MAX_RECENTS = 5;
 const key = (p: Place) => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`;
 
@@ -11,6 +13,8 @@ type TripDraft = {
   origin: Place | null;
   destination: Place | null;
   recents: Place[];
+  saved: Partial<Record<SavedKind, Place>>;
+  savePlace: (k: SavedKind, p: Place) => void;
   reset: () => void;
   setOrigin: (p: Place | null) => void;
   // Elegir destino tambien lo agrega a recientes (dedupe por lat/lng redondeado).
@@ -25,6 +29,8 @@ export const useTripDraft = create<TripDraft>()(
       origin: null,
       destination: null,
       recents: [],
+      saved: {},
+      savePlace: (k, p) => set((s) => ({ saved: { ...s.saved, [k]: p } })),
       reset: () => set(EMPTY),
       setOrigin: (origin) => set({ origin }),
       setDestination: (destination) =>
@@ -33,6 +39,6 @@ export const useTripDraft = create<TripDraft>()(
           recents: destination ? [destination, ...s.recents.filter((r) => key(r) !== key(destination))].slice(0, MAX_RECENTS) : s.recents,
         })),
     }),
-    { name: 'trip-draft', storage: createJSONStorage(() => AsyncStorage), partialize: (s) => ({ recents: s.recents }) },
+    { name: 'trip-draft', storage: createJSONStorage(() => AsyncStorage), partialize: (s) => ({ recents: s.recents, saved: s.saved }) },
   ),
 );
