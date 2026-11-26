@@ -1,0 +1,16 @@
+node_modules/
+.expo/
+.next/
+dist/
+out/
+build/
+coverage/
+.env*
+!.env.example
+supabase/.temp/
+supabase/.branches/
+*.tsbuildinfo
+next-env.d.ts
+expo-env.d.ts
+.DS_Store
+npm-debug.*
