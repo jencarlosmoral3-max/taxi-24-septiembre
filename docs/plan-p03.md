@@ -1,6 +1,6 @@
 # Plan P-03 · Home con mapa y ubicación actual
 
-Estado: en curso (2026-11-26). Rama `feat/p03-home-mapa`. Backlog: `docs/backlog.md` → P-03.
+Estado: hecho, PR abierto (2026-11-26). Rama `feat/p03-home-mapa`. Backlog: `docs/backlog.md` → P-03.
 Investigación previa (no versionada, resumida aquí): MapLibre RN 11.5.1 + OpenFreeMap.
 
 ## Objetivo
@@ -40,3 +40,19 @@ CA del backlog: funciona con permiso denegado (mensaje + fijar en mapa).
 - `tsc --noEmit` y `pnpm lint` en verde; CI 5/5.
 - Capturas en emulador: concedido (punto amarillo en Santa Cruz), denegado (mensaje + pin), atribución visible.
 - Delta de tamaño del APK medido (estimado 4–6 MB por ABI, no medido).
+
+## Resultado de la verificación (2026-11-26, emulador Android 14 `quivo_trufi3`, dev build local)
+- Build nativo con MapLibre 11.5.1: OK (gradle 3m29s, APK debug x86_64 89 MB; delta real del release no medido).
+- Mapa `styles/dark` carga con calles de Santa Cruz; botón de atribución arriba a la izquierda, diálogo con OpenFreeMap · © OpenMapTiles · OpenStreetMap.
+- Permiso concedido ("While using the app"): la cámara salta a zoom 16 sobre el fix y el punto amarillo sigue al GPS (`adb emu geo fix`).
+- Ubicación del teléfono apagada: tarjeta "Activa la ubicación"; "Activar ubicación" abre el diálogo de Google, al aceptar vuelve el watch y el punto se mueve.
+- Denegado (ya pedido antes): modo pin + "Permitir ubicación". Denegado permanente: el primer toque no muestra diálogo y la tarjeta cambia a "Abrir ajustes" (Android no expone `canAskAgain=false` hasta pedirlo).
+- Tarjeta previa "Usa tu ubicación" visible tras borrar datos de la app.
+- Review: `/code-review` y `/ponytail-review` coincidieron en "Ahora no" que no persistía y en GPS apagado tratado como permiso denegado; corregidos en el commit `fix(mobile): permiso y GPS apagado…`.
+
+### No verificado
+- "Ahora no" persistente al volver de segundo plano: el emulador se cayó (errores GL del host) antes de la prueba; verificado solo leyendo el código.
+- Error de tiles sin red: el dev client sin red tampoco carga el bundle de Metro; requiere build release.
+- Contraste del estilo `dark`: bajo (calles gris oscuro sobre casi negro). Decidir con D-03 si se empaqueta un estilo parcheado.
+- Codex: sin cuota hasta 2026-12-03.
+- Auditoría de UI (`impeccable audit`): aplicado estilo empaquetado `assets/map/vyro-dark.json` (calles `#2E2E2E`/`#3A3A3A`, agua `#1F2A33`, etiquetas `#A6A6A6` con halo, ciudades en blanco; el estilo base no tiene capas de POI), punto GPS oculto en modo pin, pin con borde blanco, labels de accesibilidad. Verificado en captura: calles y nombres legibles a zoom 14. No aplicado: botón de atribución más grande (es el nativo de MapLibre) y "Confirmar punto" (P-04/P-05).

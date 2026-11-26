@@ -8,7 +8,8 @@ Documento vivo. Se actualiza al cerrar cada iteración o PR.
 - **Siguiente paso concreto:**
   1. Hecho: Supabase remoto con 11 migraciones verificadas por huella, Edge Function `geo` desplegada (B-12/B-13), Google (Client IDs web + Android, secret cargado por el CTO), Email apagado, Realtime solo privado.
   2. Hecho: P-02 login con Google por **OAuth web de Supabase** (PR #14). E2E en emulador 2026-11-26: login → teléfono 70000001 (guardado en `private.contact_phones`) → matar y reabrir (sesión persiste) → cerrar sesión (vuelve a login).
-  3. En curso: P-03 home con mapa, plan [`docs/plan-p03.md`](plan-p03.md), rama `feat/p03-home-mapa`. Después: P-03 mapa con MapLibre + OpenFreeMap (con "© OpenStreetMap contributors"), B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
+  3. Hecho: P-03 home con mapa (MapLibre 11.5.1 + tiles OpenFreeMap con estilo propio empaquetado `apps/mobile/assets/map/vyro-dark.json` según `arte.md`), permiso con tarjeta previa, modo "fijar en mapa" y GPS apagado. Plan y verificación en [`docs/plan-p03.md`](plan-p03.md). **Cambiar de rama a una con MapLibre exige rebuild nativo.**
+  4. Siguiente: P-04 búsqueda de destino (Photon/Nominatim vía B-12) consumiendo el punto fijado, B-11 push, índice de `sos_events.handled_by`, Q-02 aviso de privacidad (proveedores OSM en Alemania). Todo en capa gratuita (decisión del CTO 2026-11-26).
   4. Prueba en el Samsung J7 cuando el MVP demo esté listo.
 - **Merge:** automático con CI verde (autorizado por el CTO): esperar todos los jobs (`typecheck`, `lint`, `build-admin`, `db-test`, `deno-geo`) en success sobre el head del PR y `gh pr merge --squash --delete-branch`.
 - **Repo:** `jencarlosmoral3-max/taxi-24-septiembre` (privado). Para `gh` y `git push`: `export GH_TOKEN=$(gh auth token --user jencarlosmoral3-max)`.
@@ -32,6 +33,8 @@ Ver [`docs/decisiones.md`](decisiones.md). Últimas: sin Figma (diseño en códi
 - Sin costos en el MVP: Supabase Free, mapas OSM, cuenta de Google Play ya existente.
 
 ## No verificado
+- P-03: "Ahora no" persistente al volver de segundo plano y error de tiles sin red (el dev client sin red no carga el bundle). Tras el estilo empaquetado (último commit) el flujo de ubicación no se pudo re-probar: el emulador quedó sin entregar ubicación tras un crash de GL (también con el código anterior, que antes funcionaba). Probar en el J7.
+- Mapa: contraste al sol directo y delta de tamaño del APK release sin medir. El estilo empaquetado es una copia parcheada de OpenFreeMap `dark` (2026-11-26); si OpenFreeMap cambia el esquema de tiles, regenerarlo.
 - `BottomSheet.tsx` tiene el mismo `KeyboardAvoidingView` con `behavior` undefined en Android que tenía `/phone` (corregido en PR del fix de teclado, 2026-11-26). Corregir igual cuando una hoja con input (contraoferta, tarifa) entre en una pantalla real. Codex `verify-fix` de ese fix: no verificado (sin cuota hasta 2026-12-03).
 - Unión real a canales Realtime por websocket, push, carga (B-17).
 - `geo` desplegada: solo se verificó el 401 sin JWT; falta una llamada con JWT real (depende del login).
