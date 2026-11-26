@@ -9,8 +9,8 @@ Estado: aprobada (plan del CTO 2026-11-25) y validada por council `council-20261
 | Mapas | `react-native-maps` (Google en Android) + estilo oscuro custom |
 | Ubicación conductor | `expo-location` + `expo-task-manager` con foreground service (go/no-go en spike F-06; plan B Transistorsoft con licencia propia) |
 | Estado cliente | TanStack Query (servidor) + Zustand (UI/sesión) |
-| Backend | Supabase `sa-east-1`: Postgres + PostGIS, Auth (teléfono), Realtime Broadcast, Storage, Edge Functions, pg_cron |
-| OTP | Twilio Verify: **WhatsApp primario**, SMS respaldo |
+| Backend | Supabase `sa-east-1`: Postgres + PostGIS, Auth (Google), Realtime Broadcast, Storage, Edge Functions, pg_cron |
+| Login | Google (Supabase Auth, `signInWithIdToken` nativo). Teléfono de contacto declarado por el usuario, sin verificar en el piloto; OTP por WhatsApp/SMS queda para después del piloto |
 | Push | FCM vía Expo Notifications, alta prioridad para pedidos y ofertas |
 | Geocoding / rutas | Google Places Autocomplete + Routes vía Edge Function (key nunca en la app) |
 | Panel sindicato | Next.js (App Router) en Vercel, mismo Supabase, claim `admin` |
@@ -20,7 +20,7 @@ Estado: aprobada (plan del CTO 2026-11-25) y validada por council `council-20261
 Descartadas: stack QUIVO (NestJS + Redis + websockets propios: más operación para un equipo chico, el CTO eligió app independiente) y Firebase (sin geoespacial nativo, cobro por lectura con GPS).
 
 ## Modelo de datos
-- `profiles` (id = auth.uid, nombre, foto, rating_avg, push_token). El teléfono vive solo en `auth.users`; el de la contraparte se entrega por RPC desde `assigned`. Admin = claim del JWT; conductor = tiene fila en `drivers` (sin columna `role`).
+- `profiles` (id = auth.uid, nombre, foto, rating_avg, push_token). El teléfono de contacto vive en `private.contact_phones` (fuera de la API); el de la contraparte se entrega por RPC desde `assigned`. Admin = claim del JWT; conductor = tiene fila en `drivers` (sin columna `role`).
 - `drivers` (profile_id, estado `pending|approved|suspended`, nº interno, licencia, CI)
 - `vehicles` (driver_id, placa, marca, modelo, color, año, RUAT, SOAT)
 - `driver_documents` (driver_id, tipo, storage_path, estado)
@@ -34,7 +34,7 @@ Descartadas: stack QUIVO (NestJS + Redis + websockets propios: más operación p
 - Índices únicos parciales: 1 viaje abierto por pasajero (`requested` a `in_progress`), 1 viaje activo por conductor, 1 oferta activa por conductor y pedido, 1 oferta aceptada por pedido.
 - Trigger en `ride_offers`: no se insertan ofertas sobre un pedido que no está `requested` y vigente (`FOR SHARE`, serializa con el `FOR UPDATE` de `accept_offer`).
 - Privilegios: `anon` y `authenticated` sin ningún permiso por defecto en `public` (tablas, secuencias, funciones, también las futuras). Cada grant es explícito, por columna o por función, desde B-02.
-- Borrado: nunca se borra `auth.users`. Eliminar cuenta = anonimizar (teléfono nulo en auth + ban, PII nula en nuestras tablas). FKs con `on delete restrict` para no perder auditoría.
+- Borrado: nunca se borra `auth.users`. Eliminar cuenta = anonimizar (borrar el teléfono de contacto + ban, PII nula en nuestras tablas). FKs con `on delete restrict` para no perder auditoría.
 - `driver_locations`: fillfactor 50 y autovacuum agresivo; GIST parcial `where is_online`. En B-17 se mide contra quitar el índice (updates HOT con seq scan).
 
 ## Máquina de estados de `rides`
@@ -73,7 +73,7 @@ Twilio Verify (WhatsApp/SMS por verificación) · Google Places/Routes (ruta cal
 
 ## Riesgos
 1. **Android gama baja** mata servicios y WebSockets en segundo plano (Xiaomi, Tecno, Samsung). Mitigación: foreground service, push FCM de alta prioridad, reconciliación; spike F-06 temprano.
-2. **Entregabilidad de OTP** en Entel/Tigo/Viva: WhatsApp primario, SMS respaldo; alta de conductores también validada por el padrón del sindicato.
+2. **Teléfono sin verificar** (login con Google): un pasajero puede declarar un número falso. Mitigación: conductores validados por el padrón y documentos; verificación por WhatsApp después del piloto si hay abuso.
 3. **Calidad de direcciones en Santa Cruz**: Google Places + "fijar en mapa".
 4. **Lógica en PL/pgSQL** es más difícil de depurar: cobertura pgTAP obligatoria en CI.
 5. **Dependencia de Supabase** (cuotas, incidentes): datos y lógica son Postgres estándar; Auth y Realtime serían lo que habría que reemplazar.

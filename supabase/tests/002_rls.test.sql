@@ -21,6 +21,7 @@ insert into public.profiles (id, full_name) values
   ('00000000-0000-0000-0000-0000000000f1', 'Admin'),
   ('00000000-0000-0000-0000-0000000000f2', 'Sin rol')
   on conflict (id) do update set full_name = excluded.full_name;
+insert into private.contact_phones (profile_id, phone) values ('00000000-0000-0000-0000-0000000000d2', '59170000022');
 insert into public.drivers (profile_id, status, ci_number) values
   ('00000000-0000-0000-0000-0000000000d1', 'approved', 'CI-1'),
   ('00000000-0000-0000-0000-0000000000d2', 'approved', 'CI-2'),
@@ -117,11 +118,11 @@ reset role;
 -- Conductor D2 / viaje de B
 select pg_temp.login('00000000-0000-0000-0000-0000000000d2');
 select is((select count(*)::int from public.rides where id = '00000000-0000-0000-0000-00000000bb01'), 1, 'D2 ve su viaje con B');
-select is((select phone from public.get_ride_contact('00000000-0000-0000-0000-00000000bb01')), '59170000002', 'D2 obtiene el teléfono de B');
+select is((select phone from public.get_ride_contact('00000000-0000-0000-0000-00000000bb01')), '59170000002', 'D2 obtiene el teléfono de B (respaldo auth.users.phone)');
 select is((select count(*)::int from public.ride_track_points), 1, 'D2 ve los track points del viaje');
 reset role;
 select pg_temp.login('00000000-0000-0000-0000-0000000000b1');
-select is((select phone from public.get_ride_contact('00000000-0000-0000-0000-00000000bb01')), '59170000012', 'B obtiene el teléfono de D2');
+select is((select phone from public.get_ride_contact('00000000-0000-0000-0000-00000000bb01')), '59170000022', 'B obtiene el teléfono de contacto de D2 (contact_phones)');
 reset role;
 
 -- D4 ofertó sobre el pedido de B, pero perdió: ya no ve el viaje ni el perfil de B

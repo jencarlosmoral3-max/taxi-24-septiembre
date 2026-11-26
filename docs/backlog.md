@@ -107,12 +107,12 @@ Políticas por rol (pasajero, conductor, admin). Teléfono y ubicación del otro
 Nota (review B-01): `anon` y `authenticated` arrancan sin privilegios. Cada acceso se concede explícito: `grant select (columnas) ...` y `grant execute on function ...`. RLS filtra filas, no columnas: `drivers.status`, `rating_*`, `ci_number`, `license_number` y `push_token` nunca se exponen ni se escriben directo. Las funciones nuevas no son ejecutables por nadie por defecto (revoke global para `postgres`): helpers de políticas y RPCs necesitan `grant execute ... to authenticated`.
 CA: RLS activado en 100% de tablas · tests pgTAP de acceso cruzado (pasajero A no ve viaje de B).
 
-### B-03 · Auth por teléfono (OTP SMS)
-labels: backend, seguridad | High | B-01, F-05
-Supabase Auth phone con Twilio Verify: **WhatsApp como canal primario, SMS como respaldo** (costo y entregabilidad en Entel/Tigo/Viva). Trigger que crea `profiles`. Rate limit de OTP. Claim `role` para admin.
-Nota (B-02): `profiles` no tiene grant de insert; el trigger sobre `auth.users` crea el perfil de **todo** usuario, admins incluidos (`config_audit.changed_by` referencia `profiles`).
-Nota (review B-03): al conectar el proyecto remoto, el rate limit real es `max_frequency`, captcha, Fraud Guard de Twilio Verify con geo-permisos solo BO y límites por IP; `sms_sent` es global por proyecto. Con Twilio Verify, largo y vigencia del OTP se fijan en el servicio de Twilio. `signInWithOtp` crea el usuario (y su perfil) antes de verificar: limpiar perfiles de números nunca verificados.
-CA: login completo con número +591 real por WhatsApp y por SMS · rate limit verificado · admin solo por claim asignado manualmente.
+### B-03 · Login con Google + teléfono de contacto
+labels: backend, seguridad | High | B-01
+Decisión del CTO (2026-11-26): login con Google en vez de OTP por SMS (sin costo). Supabase Auth Google con `signInWithIdToken` desde la app nativa. Trigger que crea `profiles` (hecho en PR #8). Teléfono de contacto declarado por el usuario (+591, sin verificar) en tabla privada; la contraparte lo ve solo por `get_ride_contact`. Claim `role` para admin. Login por teléfono (OTP) desactivado; queda como opción post-piloto (WhatsApp).
+Nota (B-02): `profiles` no tiene grant de insert; el trigger sobre `auth.users` crea el perfil de **todo** usuario, admins incluidos.
+Requiere del CTO: proyecto en Google Cloud con pantalla de consentimiento y clientes OAuth (web + Android con el SHA-1 de la firma).
+CA: login completo con cuenta Google real en Android · teléfono guardado y visible a la contraparte solo desde `assigned` · admin solo por claim asignado manualmente.
 
 ### B-04 · Storage de documentos de conductor
 labels: backend, seguridad | High | B-02
