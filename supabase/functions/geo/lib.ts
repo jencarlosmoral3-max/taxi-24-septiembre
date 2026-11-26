@@ -44,7 +44,7 @@ async function getJson(f: Fetch, url: string, timeout: number): Promise<unknown>
   }
 }
 
-// Geoapify cobra 1 crédito por cada 500 km de ruta: se corta antes de gastar (suggest_fare rechaza > 200 km solo después).
+// Viajes interurbanos: suggest_fare los rechazaría igual (> 200 km por carretera); se corta antes de llamar al upstream.
 const MAX_ROUTE_KM = 150;
 function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
   const rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
@@ -54,6 +54,13 @@ function km(a: { lat: number; lng: number }, b: { lat: number; lng: number }): n
 
 // deno-lint-ignore no-explicit-any
 type Any = any;
+export type Rpc = (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
+
+// Cobra 1 crédito del tope global; se llama solo antes de un fetch real a Geoapify (caché miss).
+async function takeCredit(rpc: Rpc): Promise<void> {
+  const { error } = await rpc("consume_geo_upstream_credit");
+  if (error) throw error.message.includes("rate_limited") ? new HttpError(429, "rate_limited") : new HttpError(500, "internal_error");
+}
 
 // shortcut: per-isolate cache, lost on cold start; move to DB/KV if traffic grows
 const cache = new Map<string, { exp: number; v: unknown }>();
@@ -68,12 +75,14 @@ async function cached<T>(key: string, ttlMs: number, fn: () => Promise<T>): Prom
 }
 export const clearCache = () => cache.clear();
 const r5 = (n: number) => n.toFixed(5);
+const r2 = (n: number) => n.toFixed(2); // ~1 km
 const join = (...p: unknown[]) => p.filter((x) => typeof x === "string" && x).join(", ");
 
 function fromGeoapify(j: Any): Place[] {
   const out: Place[] = [];
   for (const p of Array.isArray(j?.results) ? j.results : []) {
-    const lat = Number(p?.lat), lng = Number(p?.lon);
+    if (typeof p?.lat !== "number" || typeof p?.lon !== "number") continue;
+    const lat: number = p.lat, lng: number = p.lon;
     if (!isNum(lat) || !isNum(lng)) continue;
     const street = join(p.street, p.housenumber).replace(", ", " ");
     const name = p.name || street || String(p.formatted ?? "").split(",")[0].trim();
@@ -88,16 +97,18 @@ function fromGeoapify(j: Any): Place[] {
   return out;
 }
 
-async function search(f: Fetch, key: string, b: Any): Promise<{ places: Place[] }> {
+async function search(f: Fetch, rpc: Rpc, key: string, b: Any): Promise<{ places: Place[] }> {
   const q = typeof b.q === "string" ? b.q.trim() : "";
   if (q.length < 3 || q.length > 100) throw new HttpError(400, "invalid_input");
   let bias = DEFAULT_BIAS;
   if (b.lat !== undefined || b.lng !== undefined) bias = coord(b);
-  const ck = `s:${q.toLowerCase().replace(/\s+/g, " ")}:${r5(bias.lat)}:${r5(bias.lng)}`;
+  const blat = r2(bias.lat), blng = r2(bias.lng); // no se confía en que la app ya redondee
+  const ck = `s:${q.toLowerCase().replace(/\s+/g, " ")}:${blat}:${blng}`;
   return await cached(ck, 10 * 60_000, async () => {
+    await takeCredit(rpc);
     try {
       const rect = `${BBOX.minLng},${BBOX.minLat},${BBOX.maxLng},${BBOX.maxLat}`;
-      const u = `${API}/geocode/autocomplete?text=${encodeURIComponent(q)}&filter=rect:${rect}&bias=proximity:${bias.lng},${bias.lat}&limit=6&lang=es&format=json&apiKey=${encodeURIComponent(key)}`;
+      const u = `${API}/geocode/autocomplete?text=${encodeURIComponent(q)}&filter=rect:${rect}&bias=proximity:${blng},${blat}&limit=6&lang=es&format=json&apiKey=${encodeURIComponent(key)}`;
       return { places: fromGeoapify(await getJson(f, u, T_GEO)).filter((p) => inMetro(p.lat, p.lng)) };
     } catch (e) {
       console.error("geo upstream", "search", String(e));
@@ -106,9 +117,10 @@ async function search(f: Fetch, key: string, b: Any): Promise<{ places: Place[] 
   });
 }
 
-async function reverse(f: Fetch, key: string, b: Any): Promise<{ name: string; address: string }> {
+async function reverse(f: Fetch, rpc: Rpc, key: string, b: Any): Promise<{ name: string; address: string }> {
   const { lat, lng } = coord(b);
   return await cached(`r:${r5(lat)}:${r5(lng)}`, 10 * 60_000, async () => {
+    await takeCredit(rpc);
     try {
       const p = fromGeoapify(await getJson(f, `${API}/geocode/reverse?lat=${lat}&lon=${lng}&lang=es&format=json&apiKey=${encodeURIComponent(key)}`, T_GEO))[0];
       if (p) return { name: p.name, address: p.address };
@@ -117,13 +129,12 @@ async function reverse(f: Fetch, key: string, b: Any): Promise<{ name: string; a
   });
 }
 
-export type Rpc = (fn: string, args?: Record<string, unknown>) => Promise<{ data: unknown; error: { message: string } | null }>;
-
 async function route(f: Fetch, rpc: Rpc, key: string, b: Any) {
   const from = coord(b.from), to = coord(b.to);
   if (km(from, to) > MAX_ROUTE_KM) throw new HttpError(422, "invalid_route");
   const ck = `o:${r5(from.lat)},${r5(from.lng)};${r5(to.lat)},${r5(to.lng)}`;
   const leg = await cached(ck, 60 * 60_000, async () => {
+    await takeCredit(rpc);
     try {
       const j = await getJson(f, `${API}/routing?waypoints=${from.lat},${from.lng}|${to.lat},${to.lng}&mode=drive&format=json&apiKey=${encodeURIComponent(key)}`, T_ROUTE) as Any;
       const leg = j?.results?.[0];
@@ -163,16 +174,17 @@ export async function handle(req: Request, d: Deps): Promise<Response> {
     if (!auth.startsWith("Bearer ") || !(await d.getUserId(auth))) throw new HttpError(401, "unauthorized");
     if (!d.geoapifyKey) { console.error("geo: GEOAPIFY_API_KEY missing"); throw new HttpError(500, "internal_error"); }
     const rpc = d.rpcFor(auth);
-    const quota = await rpc("consume_geo_quota");
-    if (quota.error) throw new HttpError(quota.error.message.includes("rate_limited") ? 429 : 500, quota.error.message.includes("rate_limited") ? "rate_limited" : "internal_error");
     const text = await req.text();
     if (text.length > 2048) throw new HttpError(400, "invalid_input");
     let b: Any;
     try { b = JSON.parse(text); } catch { throw new HttpError(400, "invalid_input"); }
-    if (!b || typeof b !== "object") throw new HttpError(400, "invalid_input");
+    if (!b || typeof b !== "object" || !["search", "reverse", "route"].includes(b.op)) throw new HttpError(400, "invalid_input");
+    // La cuota por usuario se cobra solo con cuerpo válido y op conocida.
+    const quota = await rpc("consume_geo_quota");
+    if (quota.error) throw new HttpError(quota.error.message.includes("rate_limited") ? 429 : 500, quota.error.message.includes("rate_limited") ? "rate_limited" : "internal_error");
     switch (b.op) {
-      case "search": return json(200, await search(d.fetch, d.geoapifyKey, b));
-      case "reverse": return json(200, await reverse(d.fetch, d.geoapifyKey, b));
+      case "search": return json(200, await search(d.fetch, rpc, d.geoapifyKey, b));
+      case "reverse": return json(200, await reverse(d.fetch, rpc, d.geoapifyKey, b));
       case "route": return json(200, await route(d.fetch, rpc, d.geoapifyKey, b));
       default: throw new HttpError(400, "invalid_input");
     }

@@ -323,6 +323,9 @@ isOneToOne: false
 "consume_geo_quota":
 { Args: Record<PropertyKey, never>; Returns: undefined
                            },
+"consume_geo_upstream_credit":
+{ Args: Record<PropertyKey, never>; Returns: undefined
+                           },
 "create_ride":
 { Args: { "p_comment"?: string,"p_dest_lat": number,"p_dest_lng": number,"p_dest_text": string,"p_offered_fare_cents": number,"p_origin_lat": number,"p_origin_lng": number,"p_origin_text": string,"p_passenger_count"?: number }; Returns: string
                            },
