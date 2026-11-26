@@ -1,10 +1,18 @@
-import Image from "next/image";
+"use client";
 
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+// Export estático: no hay redirect de servidor; redirige en el cliente (router respeta basePath).
 export default function Home() {
+  const router = useRouter();
+  useEffect(() => router.replace("/solicitudes/"), [router]);
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-4">
-      <Image src="/vyro-wordmark-light.png" alt="Vyro" width={240} height={87} priority />
-      <h1 className="text-xl font-semibold">Panel del sindicato</h1>
+    <main className="p-6">
+      <p>
+        Redirigiendo… <Link href="/solicitudes/" className="underline">Ir a Solicitudes</Link>
+      </p>
     </main>
   );
 }
