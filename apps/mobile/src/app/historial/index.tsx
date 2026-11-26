@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '@/components';
 import { CommonScreen, rowStyles } from '@/demo/CommonScreen';
-import { formatDateTime, tripStatus } from '@/demo/commonExtras';
+import { formatDateTime, tripDate, tripStatus } from '@/demo/commonExtras';
 import { DEMO_TRIPS } from '@/demo/data';
 import { formatMoney } from '@/lib/money';
 import { theme } from '@/theme/theme';
@@ -22,12 +22,12 @@ export default function Historial() {
       )}
       {DEMO_TRIPS.map((t) => {
         const st = tripStatus(t.status);
-        const date = formatDateTime(t.completed_at, false);
+        const date = formatDateTime(tripDate(t), false);
         return (
           <Pressable
             key={t.id}
             accessibilityRole="button"
-            accessibilityLabel={`${date}, de ${t.origin_text} a ${t.destination_text}, ${t.final_fare_cents === null ? '' : formatMoney(t.final_fare_cents) + ', '}${st.label}`}
+            accessibilityLabel={`${date}, de ${t.origin_text ?? '—'} a ${t.destination_text ?? '—'}, ${t.final_fare_cents === null ? '' : formatMoney(t.final_fare_cents) + ', '}${st.label}`}
             onPress={() => router.push({ pathname: '/historial/[id]', params: { id: t.id } })}
             style={({ pressed }) => [rowStyles.row, styles.trip, pressed && styles.pressed]}
           >
@@ -40,7 +40,7 @@ export default function Historial() {
               </Text>
             </View>
             <Text variant="body16Medium">
-              {t.origin_text} → {t.destination_text}
+              {t.origin_text ?? '—'} → {t.destination_text ?? '—'}
             </Text>
             {t.final_fare_cents !== null && <Text variant="amount20">{formatMoney(t.final_fare_cents)}</Text>}
           </Pressable>

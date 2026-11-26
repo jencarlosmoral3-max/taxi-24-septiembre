@@ -1,11 +1,18 @@
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Linking, Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { Button, Text } from '@/components';
 import { CommonScreen, rowStyles } from '@/demo/CommonScreen';
 import { FAQ, SUPPORT_PHONE } from '@/demo/commonExtras';
 import { theme } from '@/theme/theme';
+
+// shortcut: demo, el número es de ejemplo y podría ser real; poner DEMO=false al cargar el del sindicato.
+const DEMO: boolean = true;
+const contact = (what: string, url: string, demoTitle: string) => {
+  if (DEMO) return Alert.alert(demoTitle, 'En la demo no se abre la app. En la app real se contacta al sindicato.');
+  Linking.openURL(url).catch(() => Alert.alert('No se pudo abrir', `${what}: no hay una app disponible.`));
+};
 
 export default function Soporte() {
   const [open, setOpen] = useState<number | null>(null);
@@ -13,8 +20,8 @@ export default function Soporte() {
     <CommonScreen title="Soporte">
       <Text muted>¿Necesitas ayuda? Escríbele o llama al sindicato.</Text>
       <View style={styles.actions}>
-        <Button label="WhatsApp del sindicato" onPress={() => Linking.openURL(`https://wa.me/${SUPPORT_PHONE}`)} />
-        <Button label="Llamar" variant="secondary" onPress={() => Linking.openURL(`tel:+${SUPPORT_PHONE}`)} />
+        <Button label="WhatsApp del sindicato" onPress={() => contact('Mensaje por WhatsApp', `https://wa.me/${SUPPORT_PHONE}`, 'WhatsApp (demo)')} />
+        <Button label="Llamar" variant="secondary" onPress={() => contact('Llamada', `tel:+${SUPPORT_PHONE}`, 'Llamada (demo)')} />
       </View>
       <Text variant="title18" accessibilityRole="header" style={styles.faqTitle}>
         Preguntas frecuentes

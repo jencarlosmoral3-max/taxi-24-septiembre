@@ -6,6 +6,7 @@ import { Alert, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '@/components';
 import { CommonScreen, rowStyles } from '@/demo/CommonScreen';
 import { maskPhone } from '@/demo/commonExtras';
+import { resetDemo } from '@/demo/reset';
 import { useMyPhone, useSession } from '@/lib/auth';
 import { signOut } from '@/lib/googleSignIn';
 import { useAppMode, type AppMode } from '@/store/appMode';
@@ -37,19 +38,21 @@ export default function Perfil() {
 
   const pick = (m: AppMode) => {
     if (m === mode) return;
+    // setMode antes de navegar: index.tsx redirige a /conductor si es conductor; ir directo a /conductor corre contra el guard.
+    resetDemo();
     setMode(m);
-    router.replace(m === 'driver' ? '/conductor' : '/');
+    router.replace('/');
   };
 
   const confirmSignOut = () =>
     Alert.alert('Cerrar sesión', '¿Quieres salir de tu cuenta?', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Cerrar sesión', style: 'destructive', onPress: () => void signOut() },
+      { text: 'Cerrar sesión', style: 'destructive', onPress: () => signOut().catch(() => Alert.alert('No se pudo cerrar sesión', 'Inténtalo de nuevo.')) },
     ]);
 
   // Fase 1: no borra nada.
   const confirmDelete = () =>
-    Alert.alert('Eliminar cuenta', 'Enviaremos una solicitud al sindicato para eliminar tu cuenta y tus datos. Ellos se comunicarán contigo.', [
+    Alert.alert('Eliminar cuenta', 'En la demo no se envía nada. En la app real se envía la solicitud al sindicato.', [
       { text: 'Cancelar', style: 'cancel' },
       { text: 'Enviar solicitud', style: 'destructive', onPress: () => Alert.alert('Solicitud enviada (demo)', 'En esta versión no se elimina nada.') },
     ]);
@@ -58,14 +61,14 @@ export default function Perfil() {
     <CommonScreen title="Perfil y ajustes">
       <View style={styles.head}>
         <Text variant="title20">{name}</Text>
-        <Text muted>{phone ? `Teléfono de contacto: ${maskPhone(phone)}` : 'Sin teléfono de contacto'}</Text>
+        <Text muted accessibilityLabel={phone ? `Teléfono terminado en ${phone.replace(/\D/g, '').slice(-3)}` : undefined}>{phone ? `Teléfono de contacto: ${maskPhone(phone)}` : 'Sin teléfono de contacto'}</Text>
       </View>
 
       <View style={styles.segment} accessibilityRole="radiogroup" accessibilityLabel="Modo de la app">
         {MODES.map((m) => {
           const on = m.mode === mode;
           return (
-            <Pressable key={m.mode} accessibilityRole="radio" accessibilityState={{ selected: on }} onPress={() => pick(m.mode)} style={[styles.seg, on && styles.segOn]}>
+            <Pressable key={m.mode} accessibilityRole="radio" accessibilityState={{ checked: on }} onPress={() => pick(m.mode)} style={[styles.seg, on && styles.segOn]}>
               <Text variant="body16Medium" color={on ? theme.colors.onPrimary : theme.colors.text}>
                 {m.label}
               </Text>

@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Button, RatingStars, Text } from '@/components';
 import { CommonScreen, rowStyles } from '@/demo/CommonScreen';
-import { formatDateTime, tripStatus } from '@/demo/commonExtras';
+import { formatDateTime, tripDate, tripStatus } from '@/demo/commonExtras';
 import { DEMO_TRIPS } from '@/demo/data';
 import { formatMoney } from '@/lib/money';
 import { theme } from '@/theme/theme';
@@ -37,7 +37,7 @@ export default function DetalleViaje() {
     <CommonScreen title="Detalle del viaje">
       <View style={[rowStyles.row, styles.card]}>
         <Field label="Estado" value={st.label} />
-        <Field label="Fecha y hora" value={formatDateTime(t.completed_at)} />
+        <Field label="Fecha y hora" value={formatDateTime(tripDate(t))} />
         <Field label="Origen" value={t.origin_text ?? '—'} />
         <Field label="Destino" value={t.destination_text ?? '—'} />
         {t.final_fare_cents !== null && <Field label="Monto" value={formatMoney(t.final_fare_cents)} />}

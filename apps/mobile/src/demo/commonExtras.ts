@@ -1,4 +1,6 @@
 // Fase 1 (demo): datos de ejemplo. Se borra en fase 2 (plan-pantallas.md).
+import type { Tables } from '@vyro/db-types';
+
 import type { DemoTrip } from './data';
 
 // shortcut: número demo, reemplazar por el del sindicato antes del piloto
@@ -19,6 +21,9 @@ export const TRIP_STATUS: Record<string, { label: string; ok: boolean }> = {
   cancelled_driver: { label: 'Cancelado', ok: false },
 };
 export const tripStatus = (s: DemoTrip['status']) => TRIP_STATUS[s] ?? { label: 'Cancelado', ok: false };
+
+// Cancelados no tienen completed_at: cae a cancelled_at y luego created_at.
+export const tripDate = (t: DemoTrip & Partial<Pick<Tables<'rides'>, 'cancelled_at' | 'created_at'>>) => t.completed_at ?? t.cancelled_at ?? t.created_at ?? null;
 
 // Intl de Hermes puede faltar en algunos dispositivos: cae a toLocaleString.
 export function formatDateTime(iso: string | null, withTime = true): string {

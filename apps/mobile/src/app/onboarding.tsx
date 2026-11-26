@@ -24,7 +24,12 @@ export default function Onboarding() {
   const [page, setPage] = useState(0);
   const last = page === SLIDES.length - 1;
 
-  const next = () => (last ? markSeen() : list.current?.scrollToIndex({ index: page + 1 }));
+  // Android no dispara onMomentumScrollEnd con scrollToIndex programático.
+  const next = () => {
+    if (last) return markSeen();
+    list.current?.scrollToIndex({ index: page + 1 });
+    setPage(page + 1);
+  };
 
   return (
     <View style={[styles.root, { paddingTop: insets.top, paddingBottom: insets.bottom + theme.spacing.xl }]}>
